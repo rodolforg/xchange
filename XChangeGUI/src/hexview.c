@@ -18,7 +18,7 @@
 #define TEXT_SPACEMENT 10
 #define OFFSET_PANEL_SPACEMENT 5
 
-#define VISUAL_CARACTERE_NULO '_'
+#define VISUAL_CARACTERE_NULO "_"
 
 #define PADRAO_COR_SELECAO_R 0.5
 #define PADRAO_COR_SELECAO_G 0.5
@@ -95,6 +95,7 @@ struct _XChangeHexView
 	gboolean overwrite;
 	gboolean show_offset_panel;
 	gboolean show_text_panel;
+	gchar *null_char_replacer;
 };
 
 struct _XChangeHexViewClass
@@ -305,6 +306,8 @@ static void xchange_hex_view_init(XChangeHexView *hexv)
 	hexv->overwrite = TRUE;
 	hexv->show_offset_panel = TRUE;
 	hexv->show_text_panel = TRUE;
+
+	hexv->null_char_replacer = g_strdup(VISUAL_CARACTERE_NULO);
 }
 
 GtkWidget *
@@ -475,6 +478,9 @@ static void xchange_hex_view_destroy(GtkObject *object)
 	hexv->cursor_foreground_color = NULL;
 	cairo_pattern_destroy(hexv->cursor_background_color);
 	hexv->cursor_background_color = NULL;
+
+	g_free(hexv->null_char_replacer);
+	hexv->null_char_replacer = NULL;
 }
 
 static void calcula_tamanho_buffer(XChangeHexView *hexv)
@@ -792,6 +798,49 @@ static gboolean get_text_dimention(const XChangeHexView *hexv, gboolean text_pan
 	return success;
 }
 
+static gchar *replace_null_char(const XChangeHexView *hexv, const char *texto, int length, int *new_length)
+{
+	gchar *novo_texto;
+	gint novo_comprimento;
+	gint comprimento_null;
+
+	if (!XCHANGE_IS_HEX_VIEW(hexv))
+		return NULL;
+	if (texto == NULL)
+		return NULL;
+
+	// Descobre novo comprimento
+	const gchar *replacer = hexv->null_char_replacer == NULL? VISUAL_CARACTERE_NULO : hexv->null_char_replacer;
+	comprimento_null = strlen(replacer);
+	novo_comprimento = length;
+	int n;
+	for (n = 0; n < length; n++)
+		if (texto[n]==0)
+			novo_comprimento+=comprimento_null - 1;
+
+	// Aloca espaço para o novo texto
+	novo_texto = g_try_malloc0(novo_comprimento+1);
+	if (novo_texto == NULL)
+		return NULL;
+
+	// Copia substituindo
+	int d = 0;
+	for (n = 0; n < length; n++)
+	{
+		if (texto[n]==0)
+		{
+			memcpy(&novo_texto[d], replacer, comprimento_null);
+			d += comprimento_null;
+		}
+		else
+			novo_texto[d++] = texto[n];
+	}
+
+	if (new_length != NULL)
+		*new_length = novo_comprimento+1;
+	return novo_texto;
+}
+
 static gboolean get_line_text_size(const XChangeHexView *hexv, off_t offset, gboolean fullline, cairo_text_extents_t* text_size)
 {
 	gboolean success = FALSE;
@@ -801,15 +850,13 @@ static gboolean get_line_text_size(const XChangeHexView *hexv, off_t offset, gbo
 	if (texto == NULL)
 		return FALSE;
 
-	int n;
-	for (n = 0; n < length; n++)
-		if (texto[n]==0)
-			texto[n]=VISUAL_CARACTERE_NULO;
-
-//	g_print("%s\n", texto);
-
-	success = get_text_dimention(hexv, TRUE, texto, text_size);
+	char *novo_texto = replace_null_char(hexv, texto, length, NULL);
 	g_free(texto);
+	if (novo_texto == NULL)
+		return FALSE;
+
+	success = get_text_dimention(hexv, TRUE, novo_texto, text_size);
+	g_free(novo_texto);
 	return success;
 }
 
@@ -1253,10 +1300,14 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 					buffer_texto[0] = 0;
 
 				// Substitui bytes nulos para algo visual...
+				gint novo_resp_texto;
+				gchar *novo_texto = replace_null_char(hexv, buffer_texto, resp_texto, &novo_resp_texto);
+				/*
 				int it;
 				for (it = 0; it < resp_texto; it++)
 					if (buffer_texto[it]==0)
 						buffer_texto[it]=VISUAL_CARACTERE_NULO;
+				*/
 
 				//if (resp_texto > 0)
 				/*
@@ -1267,7 +1318,8 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 				*/
 
 				//cairo_show_text(cr, buffer_texto);
-				pango_layout_set_text (text_layout, buffer_texto, resp_texto);
+				pango_layout_set_text (text_layout, novo_texto, novo_resp_texto);
+				g_free(novo_texto);
 				//pango_cairo_show_layout (cr, layout);
 				pango_cairo_show_layout_line (cr, pango_layout_get_line (text_layout, 0));
 
@@ -2897,6 +2949,30 @@ void xchange_hex_view_set_table(XChangeHexView *xchange_hex_view, const XChangeT
 	//update_scroll_bounds(xchange_hex_view);
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
 }
+
+/*
+ * Change the look how a NULL character appears at screen. It can be replaced by a string.
+ * @character: the string with new representation. Set NULL for default (_ )
+ */
+void xchange_hex_view_set_null_character_replacement(XChangeHexView *xchange_hex_view, const gchar *character)
+{
+	if (!XCHANGE_IS_HEX_VIEW(xchange_hex_view))
+		return;
+	if (g_strcmp0(xchange_hex_view->null_char_replacer, character) == 0)
+		return;
+
+	g_free(xchange_hex_view->null_char_replacer);
+
+	if (character == NULL)
+	{
+		xchange_hex_view->null_char_replacer = g_strdup(VISUAL_CARACTERE_NULO);
+	}
+	else
+		xchange_hex_view->null_char_replacer = g_strdup(character);
+
+	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
+}
+
 
 gchar *xchange_hex_view_get_selected_text(XChangeHexView *xchange_hex_view, size_t *size)
 {

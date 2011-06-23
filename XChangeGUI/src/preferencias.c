@@ -328,6 +328,7 @@ static void interpreta_preferencias(GKeyFile *keyfile, struct Preferencias * pre
 	ler_preferencia_texto(keyfile, "Painel Texto", "Caractere desconhecido", &preferencias->caractere_desconhecido);
 	// TODO: ativar caractere desconhecido?
 	ler_preferencia_texto(keyfile, "Painel Texto", "Caractere nulo", &preferencias->caractere_nulo);
+		xchange_hex_view_set_null_character_replacement(XCHANGE_HEX_VIEW(hexv), preferencias->caractere_nulo);
 	// TODO: ativar caractere nulo?
 	ler_preferencia_texto(keyfile, "Painel Texto", "Caractere quebra de linha", &preferencias->caractere_novalinha);
 	// TODO: ativar caractere novalinha?
@@ -951,4 +952,25 @@ void on_entry_caractere_para_desconhecido_changed(GtkEntry *entry, gpointer data
 		if (xt_tabela[n] != NULL)
 			xchange_table_set_unknown_char(xt_tabela[n], valor, -1);
 	gtk_widget_queue_draw(dados->janelas.hexv);
+}
+
+G_MODULE_EXPORT
+void on_entry_caractere_para_nulo_changed(GtkEntry *entry, gpointer data)
+{
+	struct ManipuladorPreferencias *dados = data;
+	const gchar *valor;
+
+	valor = gtk_entry_get_text(entry);
+	if (g_utf8_strlen(valor, -1)!=0)
+		g_key_file_set_string(dados->keyfile, "Painel Texto", "Caractere nulo", valor);
+	else
+	{
+		g_key_file_remove_key(dados->keyfile, "Painel Texto", "Caractere nulo", NULL);
+		valor = "_";
+	}
+
+	g_free(dados->preferencias->caractere_nulo);
+	dados->preferencias->caractere_nulo = g_strdup(valor);
+
+	xchange_hex_view_set_null_character_replacement(XCHANGE_HEX_VIEW(dados->janelas.hexv), valor);
 }

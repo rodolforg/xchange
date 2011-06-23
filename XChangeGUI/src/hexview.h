@@ -63,6 +63,7 @@ void xchange_hex_view_set_font_color_default(XChangeHexView *xchange_hex_view);
 
 void xchange_hex_view_set_byte_row_length(XChangeHexView *xchange_hex_view, gushort byte_row_length);
 
+void xchange_hex_view_set_null_character_replacement(XChangeHexView *xchange_hex_view, const gchar *character);
 
 const XChangeFile *xchange_hex_view_get_file(XChangeHexView *xchange_hex_view);
 const XChangeTable *xchange_hex_view_get_table(XChangeHexView *xchange_hex_view);
