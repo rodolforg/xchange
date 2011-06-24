@@ -2034,7 +2034,7 @@ static gboolean miniedition_key_press (GtkWidget *widget, GdkEventKey *event, gp
 		return TRUE;
 	}
 
-	if (event->keyval == GDK_KEY_Return && event->state == 0)
+	if (event->keyval == GDK_KEY_Return && (event->state & ~GDK_LOCK_MASK) == 0)
 	{
 		// Insere o texto
 		// Converte para bytes
