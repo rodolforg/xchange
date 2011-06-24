@@ -1328,7 +1328,7 @@ void xchange_table_dump_entries(XChangeTable *xt)
 }
 
 
-int xchange_table_set_unknown_char(XChangeTable *table, const char* character, int length)
+int xchange_table_set_unknown_charUTF8(XChangeTable *table, const char* character, int length)
 {
 	if (table == NULL)
 		return 0;
@@ -1356,7 +1356,7 @@ int xchange_table_set_unknown_char(XChangeTable *table, const char* character, i
 	return 1;
 }
 
-int xchange_table_set_lineend_mark(XChangeTable *table, const char* character, int length)
+int xchange_table_set_lineend_markUTF8(XChangeTable *table, const char* character, int length)
 {
 	if (table == NULL)
 		return 0;
@@ -1395,7 +1395,7 @@ int xchange_table_set_lineend_mark(XChangeTable *table, const char* character, i
 	return 1;
 }
 
-int xchange_table_set_paragraph_mark(XChangeTable *table, const char* character, int length)
+int xchange_table_set_paragraph_markUTF8(XChangeTable *table, const char* character, int length)
 {
 	if (table == NULL)
 		return 0;
@@ -1432,4 +1432,41 @@ int xchange_table_set_paragraph_mark(XChangeTable *table, const char* character,
 	bubble(table->entries_value, table->nentries, inverse_compare_entry_value_size);
 
 	return 1;
+}
+
+const unsigned char* xchange_table_get_unknown_charUTF8(XChangeTable *table, int *length)
+{
+	if (table == NULL)
+		return NULL;
+	if (length != NULL)
+		*length = table->unknown_length;
+	return table->unknown;
+}
+
+const uint8_t* xchange_table_get_lineend_markUTF8(XChangeTable *table, int *length)
+{
+	if (table == NULL)
+		return NULL;
+
+	Entry *e = search_entry_by_key(table->entries_key, table->nentries, table->lineend_key, table->lineend_key_length);
+	if (e == NULL)
+		return NULL;
+
+	if (length != NULL)
+		*length = e->nvalue;
+	return e->value;
+}
+
+const uint8_t* xchange_table_get_paragraph_markUTF8(XChangeTable *table, int *length)
+{
+	if (table == NULL)
+		return NULL;
+
+	Entry *e = search_entry_by_key(table->entries_key, table->nentries, table->paragraph_key, table->paragraph_key_length);
+	if (e == NULL)
+		return NULL;
+
+	if (length != NULL)
+		*length = e->nvalue;
+	return e->value;
 }
