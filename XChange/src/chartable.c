@@ -1012,6 +1012,7 @@ int xchange_table_print_stringUTF8(const XChangeTable *table,
 	off_t outpos = 0;
 	if (table->type == CHARSET_TABLE)
 	{
+		/*
 		char *tmpbuffer = NULL;
 		char *inbuf = bytes;
 		size_t inleft = size;
@@ -1040,6 +1041,8 @@ int xchange_table_print_stringUTF8(const XChangeTable *table,
 		}
 
 		return text != NULL? outbuf - text : outbuf - tmpbuffer;
+		*/
+		return xchange_table_print_best_stringUTF8(table, bytes, size, text, size, NULL);
 	}
 	// Table files
 	Entry *e;
@@ -1145,18 +1148,21 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 									{
 										// Tudo errado: sequência inválida
 										//  copia byte de caractere desconhecido e fim
-										inbuf++;
-										inleft--;
-										memcpy(outbuf, table->unknown, unknown_character_length);
-										outbuf += unknown_character_length;
-										outleft -= unknown_character_length;
-										//error = 1;
+										if (outleft >= unknown_character_length)
+										{
+											inbuf++;
+											inleft--;
+											memcpy(outbuf, table->unknown, unknown_character_length);
+											outbuf += unknown_character_length;
+											outleft -= unknown_character_length;
+										}
+										else
+											error = 1;
 										break;
 									}
 									perror("Iconv error 1");
 									error = 1;
 								}
-								// FIXME: Deveria ficar repetindo tentativa até chegar a size?
 								break;
 							}
 							else
