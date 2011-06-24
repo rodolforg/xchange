@@ -1102,25 +1102,17 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 		int error = 0;
 		while (inleft > 0)
 		{
-			//fprintf(stderr, "Converter\n");
-			//iconv(table->icd, inbuf, inleft, outbuf, outleft);
-			//fprintf(stderr, "Antes: Inleft: %zu Outleft: %zu Outsize: %zu\n", inleft, outleft, outsize);
-			//fprintf(stderr, "Texto: %s\n", text);
 			if (iconv(table->icd, &inbuf, &inleft, &outbuf, &outleft) == (size_t)-1)
 			{
 				switch (errno)
 				{
 				case EILSEQ:
 				{
-					//fprintf(stderr, "Error: inleft: %zu\n", inleft);
 					inbuf++;
 					inleft--;
 					memcpy(outbuf, table->unknown, unknown_character_length);
 					outbuf += unknown_character_length;
 					outleft -= unknown_character_length;
-//					outbuf[0] = '?';
-//					outbuf++;
-//					outleft--;
 					break;
 				}
 				case EINVAL:
@@ -1129,28 +1121,50 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 					{
 						// Tenta ler o que falta...
 						size_t fake_inleft;
-						size_t fake_original;
-						if (min_read + 1 < size)
-							fake_inleft = inleft + 1;
-						else
+						int qtd_extra = 1;
+
+						while (!error || qtd_extra < 5)
 						{
-							error = 1;
-							break;
-						}
-						fake_original = fake_inleft;
-						if (iconv(table->icd, &inbuf, &fake_inleft, &outbuf, &outleft) == (size_t)-1)
-						{
-							perror("Iconv error 1");
-							error = 1;
-							// FIXME: Deveria ficar repetindo tentativa até chegar a size?
-							break;
-						}
-						else
-						{
-							//inleft -= fake_original; // FIXME
-							inleft = -1;
-							error = 2;
-							break;
+							if (min_read < size - qtd_extra)
+								fake_inleft = inleft + qtd_extra;
+							else
+							{
+								error = 1;
+								break;
+							}
+							if (iconv(table->icd, &inbuf, &fake_inleft, &outbuf, &outleft) == (size_t)-1)
+							{
+								if (errno == EINVAL)
+								{
+									qtd_extra++;
+									continue;
+								}
+								else
+								{
+									if (errno == EILSEQ)
+									{
+										// Tudo errado: sequência inválida
+										//  copia byte de caractere desconhecido e fim
+										inbuf++;
+										inleft--;
+										memcpy(outbuf, table->unknown, unknown_character_length);
+										outbuf += unknown_character_length;
+										outleft -= unknown_character_length;
+										//error = 1;
+										break;
+									}
+									perror("Iconv error 1");
+									error = 1;
+								}
+								// FIXME: Deveria ficar repetindo tentativa até chegar a size?
+								break;
+							}
+							else
+							{
+								inleft = -qtd_extra;
+								error = 2;
+								break;
+							}
 						}
 					}
 					else
@@ -1195,17 +1209,14 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 		if (n != table->nentries)
 		{
 			if (text != NULL)
-				memcpy(text+outpos, e->value, e->nvalue); // FIXME: convert encoding!
-			outpos += e->nvalue; // FIXME convert encoding!
+				memcpy(text+outpos, e->value, e->nvalue);
+			outpos += e->nvalue;
 			inpos += e->nkey;
 		}
 		else
 		{
 			if (text != NULL)
 			{
-				//memcpy(text+outpos, "\xFF\xFD", 2); // FIXME: convert encoding! �
-			//	text[outpos++] = '?';
-				//text[outpos++] = 0xFD;
 				memcpy(text+outpos, table->unknown, table->unknown_length);
 				outpos+=table->unknown_length;
 			}
