@@ -2530,34 +2530,42 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 	}
 	else if (event->keyval == GDK_KEY_Delete && event->state == 0)
 	{
-		if (xchange_hex_view_get_has_selection(hexv))
-			xchange_hex_view_delete_selection(hexv);
-		else
-			xchange_hex_view_delete(hexv, hexv->cursor_position, 1);
+		if (hexv->editable)
+		{
+			if (xchange_hex_view_get_has_selection(hexv))
+				xchange_hex_view_delete_selection(hexv);
+			else
+				xchange_hex_view_delete(hexv, hexv->cursor_position, 1);
+		}
 	}
 	else if (event->keyval == GDK_KEY_BackSpace && event->state == 0)
 	{
-		if (xchange_hex_view_get_has_selection(hexv))
-			xchange_hex_view_delete_selection(hexv);
-		else
+		if (hexv->editable)
 		{
-			if (!hexv->overwrite)
+			if (xchange_hex_view_get_has_selection(hexv))
+				xchange_hex_view_delete_selection(hexv);
+			else
 			{
-				if (hexv->cursor_position > 0)
+				if (!hexv->overwrite)
 				{
-					xchange_hex_view_delete(hexv, hexv->cursor_position-1, 1);
-					retrocede_cursor(hexv, 1, TRUE);
+					if (hexv->cursor_position > 0)
+					{
+						xchange_hex_view_delete(hexv, hexv->cursor_position-1, 1);
+						retrocede_cursor(hexv, 1, TRUE);
+					}
 				}
 			}
 		}
 	}
 	else if (event->keyval == GDK_KEY_z && event->state == GDK_CONTROL_MASK)
 	{
-		xchange_hex_view_undo(hexv);
+		if (hexv->editable)
+			xchange_hex_view_undo(hexv);
 	}
 	else if (event->keyval == GDK_KEY_y && event->state == GDK_CONTROL_MASK)
 	{
-		xchange_hex_view_redo(hexv);
+		if (hexv->editable)
+			xchange_hex_view_redo(hexv);
 	}
 	else if (event->keyval == GDK_KEY_Return)
 	{
