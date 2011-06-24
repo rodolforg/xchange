@@ -2530,7 +2530,7 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 	}
 	else if (event->keyval == GDK_KEY_Delete && event->state == 0)
 	{
-		if (hexv->editable)
+		if (hexv->editable && !hexv->overwrite)
 		{
 			if (xchange_hex_view_get_has_selection(hexv))
 				xchange_hex_view_delete_selection(hexv);
@@ -2540,19 +2540,16 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 	}
 	else if (event->keyval == GDK_KEY_BackSpace && event->state == 0)
 	{
-		if (hexv->editable)
+		if (hexv->editable && !hexv->overwrite)
 		{
 			if (xchange_hex_view_get_has_selection(hexv))
 				xchange_hex_view_delete_selection(hexv);
 			else
 			{
-				if (!hexv->overwrite)
+				if (hexv->cursor_position > 0)
 				{
-					if (hexv->cursor_position > 0)
-					{
-						xchange_hex_view_delete(hexv, hexv->cursor_position-1, 1);
-						retrocede_cursor(hexv, 1, TRUE);
-					}
+					xchange_hex_view_delete(hexv, hexv->cursor_position-1, 1);
+					retrocede_cursor(hexv, 1, TRUE);
 				}
 			}
 		}
