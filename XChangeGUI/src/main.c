@@ -52,6 +52,8 @@ GtkWidget *checkbutton_localizar_para_tras;
 
 GtkAction *toggleaction_visao_tabela;
 GtkAction *radioaction_visao_codificao_padronizada;
+GtkAction *radioaction_visao_tabela1;
+GtkAction *radioaction_visao_tabela2;
 GtkAction *toggleaction_modo_insercao;
 GtkAction *action_undo;
 GtkAction *action_redo;
@@ -161,6 +163,11 @@ int mostra_janela()
 			builder, "toggleaction_visao_tabela"));
 	radioaction_visao_codificao_padronizada = GTK_ACTION(gtk_builder_get_object(
 			builder, "radioaction_visao_codificao_padronizada"));
+	radioaction_visao_tabela1 = GTK_ACTION(gtk_builder_get_object(builder,
+			"radioaction_visao_tabela1"));
+	radioaction_visao_tabela2 = GTK_ACTION(gtk_builder_get_object(builder,
+			"radioaction_visao_tabela2"));
+
 	toggleaction_modo_insercao = GTK_ACTION(gtk_builder_get_object(
 			builder, "toggleaction_modo_edicao"));
 
@@ -839,12 +846,10 @@ static gchar *obtem_escolha_codificacao(GtkComboBox *combobox)
 	return encoding;
 }
 
-static XChangeTable *carregar_tabela()
+static gchar *usuario_escolhe_arquivo_tabela(gchar **encoding)
 {
-	GtkWidget * dialog = filechooserdialog_carregar_texto;/*gtk_file_chooser_dialog_new(
-			"Carregar tabela de caracteres...", GTK_WINDOW(main_window),
-			GTK_FILE_CHOOSER_ACTION_OPEN, GTK_STOCK_OPEN, GTK_RESPONSE_OK,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, NULL);*/
+	gchar *filename = NULL;
+	GtkWidget * dialog = filechooserdialog_carregar_texto;
 
 	if (ultimo_diretorio != NULL)
 		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
@@ -872,35 +877,16 @@ static XChangeTable *carregar_tabela()
 
 	gint result = gtk_dialog_run(GTK_DIALOG(dialog));
 
-	XChangeTable * xt = NULL;
-
 	if (result == GTK_RESPONSE_OK)
 	{
-		char *filename, *dirname;
-		char *encoding;
-
+		gchar *dirname;
 
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 
-		encoding = obtem_escolha_codificacao(GTK_COMBO_BOX(comboboxentry_codificacao_caracteres_arquivo));
-
-		char *filename_decoded = g_locale_from_utf8(filename, -1, NULL, NULL, NULL);
-		xt = xchange_table_open(filename_decoded, THINGY_TABLE, encoding);
-		g_free(filename_decoded);
-		g_free(encoding);
-
-		if (xt == NULL)
-		{
-			gtk_widget_hide(dialog);
-			gchar * msg = g_strdup_printf("Não conseguiu abrir o arquivo de codificação de caracteres!\n%s",filename);
-			mostraMensagemErro(msg);
-			g_free(filename);
-			g_free(msg);
-			return NULL;
-		}
+		if (encoding != NULL)
+			*encoding = obtem_escolha_codificacao(GTK_COMBO_BOX(comboboxentry_codificacao_caracteres_arquivo));
 
 		dirname = g_path_get_dirname(filename);
-		g_free(filename);
 		if (dirname != NULL)
 		{
 			g_free(ultimo_diretorio);
@@ -915,6 +901,24 @@ static XChangeTable *carregar_tabela()
 	gtk_file_chooser_remove_filter (GTK_FILE_CHOOSER(dialog), filter[0]);
 	gtk_file_chooser_remove_filter (GTK_FILE_CHOOSER(dialog), filter[1]);
 	gtk_file_chooser_remove_filter (GTK_FILE_CHOOSER(dialog), filter[2]);
+
+	return filename;
+}
+
+static XChangeTable *carregar_tabela(const char *filename, const char *encoding)
+{
+	XChangeTable * xt;
+	char *filename_decoded = g_locale_from_utf8(filename, -1, NULL, NULL, NULL);
+	xt = xchange_table_open(filename_decoded, THINGY_TABLE, encoding);
+	g_free(filename_decoded);
+
+	if (xt == NULL)
+	{
+		gchar * msg = g_strdup_printf("Não conseguiu abrir o arquivo de codificação de caracteres!\n%s",filename);
+		mostraMensagemErro(msg);
+		g_free(msg);
+		return NULL;
+	}
 
 	xchange_table_set_unknown_char(xt, preferencias.caractere_desconhecido, -1);
 
@@ -1047,7 +1051,12 @@ gboolean on_main_window_key_press_event(GtkWidget *widget, GdkEventKey *event, g
 G_MODULE_EXPORT
 void on_action_carregar_tabela_activate(GtkAction *action, gpointer data)
 {
-	XChangeTable *xt = carregar_tabela();
+	gchar *filename, *encoding;
+	filename = usuario_escolhe_arquivo_tabela(&encoding);
+	if (filename == NULL)
+		return;
+
+	XChangeTable *xt = carregar_tabela(filename, encoding);
 	if (xt != NULL)
 	{
 		XChangeTable *xt_anterior = xt_tabela[1];
@@ -1055,13 +1064,29 @@ void on_action_carregar_tabela_activate(GtkAction *action, gpointer data)
 		set_current_table(1);
 		if (xt_anterior != NULL)
 			xchange_table_close(xt_anterior);
+		gchar *nome_base_arquivo = g_path_get_basename(filename);
+		gchar *rotulo = NULL;
+		if (nome_base_arquivo == NULL)
+			rotulo = g_strdup("Visão tabela 1");
+		else
+			rotulo = g_strdup_printf("Visão tabela 1 (%s)", nome_base_arquivo);
+		gtk_action_set_label(radioaction_visao_tabela1, rotulo);
+		g_free(nome_base_arquivo);
+		g_free(rotulo);
 	}
+	g_free(filename);
+	g_free(encoding);
 }
 
 G_MODULE_EXPORT
 void on_action_carregar_tabela2_activate(GtkAction *action, gpointer data)
 {
-	XChangeTable *xt = carregar_tabela();
+	gchar *filename, *encoding;
+	filename = usuario_escolhe_arquivo_tabela(&encoding);
+	if (filename == NULL)
+		return;
+
+	XChangeTable *xt = carregar_tabela(filename, encoding);
 	if (xt != NULL)
 	{
 		XChangeTable *xt_anterior = xt_tabela[2];
@@ -1069,7 +1094,18 @@ void on_action_carregar_tabela2_activate(GtkAction *action, gpointer data)
 		set_current_table(2);
 		if (xt_anterior != NULL)
 			xchange_table_close(xt_anterior);
+		gchar *nome_base_arquivo = g_path_get_basename(filename);
+		gchar *rotulo = NULL;
+		if (nome_base_arquivo == NULL)
+			rotulo = g_strdup("Visão tabela 2");
+		else
+			rotulo = g_strdup_printf("Visão tabela 2 (%s)", nome_base_arquivo);
+		gtk_action_set_label(radioaction_visao_tabela2, rotulo);
+		g_free(nome_base_arquivo);
+		g_free(rotulo);
 	}
+	g_free(filename);
+	g_free(encoding);
 }
 
 G_MODULE_EXPORT
