@@ -2530,7 +2530,7 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 	}
 	else if (event->keyval == GDK_KEY_Delete)
 	{
-		if (hexv->editable && !hexv->overwrite)
+		if (hexv->editable && !hexv->overwrite && !hexv->cursor_position_half)
 		{
 			if (xchange_hex_view_get_has_selection(hexv))
 				xchange_hex_view_delete_selection(hexv);
@@ -2540,7 +2540,7 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 	}
 	else if (event->keyval == GDK_KEY_BackSpace)
 	{
-		if (hexv->editable && !hexv->overwrite)
+		if (hexv->editable && !hexv->overwrite && !hexv->cursor_position_half)
 		{
 			if (xchange_hex_view_get_has_selection(hexv))
 				xchange_hex_view_delete_selection(hexv);
@@ -3113,7 +3113,7 @@ static void xchange_hex_view_delete(XChangeHexView *xchange_hex_view, off_t orig
 			if (new_filesize != -1 && xchange_hex_view->cursor_position >= new_filesize)
 			{
 				xchange_hex_view->cursor_position_half = FALSE;
-				retrocede_cursor(xchange_hex_view, xchange_hex_view->cursor_position - new_filesize + 1, TRUE);
+				retrocede_cursor(xchange_hex_view, xchange_hex_view->cursor_position - new_filesize, TRUE);
 			}
 
 			if (xchange_hex_view->selection_start != -1 && xchange_hex_view->selection_start >= new_filesize)
@@ -3140,6 +3140,10 @@ void xchange_hex_view_delete_selection(XChangeHexView *xchange_hex_view)
 	xchange_hex_view_delete(xchange_hex_view, inicio, fim-inicio +1);
 	reset_selection(xchange_hex_view);
 	update_scroll_bounds(xchange_hex_view);
+	if (xchange_hex_view->cursor_position > inicio)
+		retrocede_cursor(xchange_hex_view, xchange_hex_view->cursor_position - inicio, TRUE);
+	else if (xchange_hex_view->cursor_position < inicio)
+		avanca_cursor(xchange_hex_view, inicio - xchange_hex_view->cursor_position, TRUE);
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view)); // FIXME _area
 }
 
