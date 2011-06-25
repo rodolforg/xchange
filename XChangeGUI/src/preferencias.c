@@ -549,14 +549,8 @@ gboolean abrir_dialogo_preferencias(const Preferencias *preferencias)
 
 	configura_dialogo(&dadosInternos);
 	gtk_dialog_run(GTK_DIALOG(dadosInternos.janelas.dialogo_preferencias));
+	gtk_widget_destroy(dadosInternos.janelas.dialogo_preferencias);
 	return TRUE;
-}
-
-G_MODULE_EXPORT
-void on_action_fechar_preferencias_activate(GtkAction *action, gpointer data)
-{
-	struct ManipuladorPreferencias *dados = data;
-	gtk_widget_destroy(dados->janelas.dialogo_preferencias);
 }
 
 G_MODULE_EXPORT

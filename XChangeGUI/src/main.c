@@ -1906,7 +1906,6 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data)
 G_MODULE_EXPORT
 void on_action_abre_preferencias_activate(GtkAction *action, gpointer data)
 {
-	// TODO: Ajustar valores iniciais do diálogo!!!
 	abrir_dialogo_preferencias(&preferencias);
 }
 
