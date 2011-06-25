@@ -1096,11 +1096,23 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 
 	if (table->type == CHARSET_TABLE)
 	{
+		char *tmpbuffer = NULL;
 		char *inbuf = bytes;
 		size_t inleft = min_read; // FIXME: Garantir que vai ler pelo menos min_read bytes
 		char *outbuf = text;
-		size_t outsize = (text == NULL)? 0 : 4*size;
+		size_t outsize = 4*size;
 		size_t outleft = outsize;
+
+		// Sadly iconv doesn't compute their thing without a valid outbuffer...
+		if (text == NULL)
+		{
+			tmpbuffer = malloc(outleft);
+			if (tmpbuffer == NULL)
+				return -1;
+			outbuf = tmpbuffer;
+		}
+
+
 		int unknown_character_length = table->unknown_length;
 		int error = 0;
 		while (inleft > 0)
@@ -1193,6 +1205,7 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 		}
 		if (read != NULL)
 			*read = min_read - inleft;
+		free(tmpbuffer);
 		return outbuf - text;
 	}
 
