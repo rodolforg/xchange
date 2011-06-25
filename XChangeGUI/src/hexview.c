@@ -2024,6 +2024,107 @@ struct MiniEditionWindowData
 	GtkWindow *window;
 };
 
+static uint8_t *miniedition_convert_text_into_byte(const struct MiniEditionWindowData *mew, int *length)
+{
+	GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(mew->view);
+
+	if (length != NULL)
+		*length = -1;
+
+	if (!GTK_TEXT_BUFFER(text_buffer))
+		return NULL;
+
+	GtkTextIter start, end;
+	gtk_text_buffer_get_bounds(text_buffer, &start, &end);
+	gchar *texto_original = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
+
+	GRegex * regex = g_regex_new("\\R", G_REGEX_MULTILINE, G_REGEX_MATCH_NOTBOL | G_REGEX_MATCH_NOTEOL, NULL);
+	gchar *texto_original_sem_quebras_artificiais = g_regex_replace_literal(regex, texto_original, -1, 0, "", 0, NULL);
+	g_regex_unref(regex);
+	if (texto_original_sem_quebras_artificiais != NULL)
+	{
+		g_free(texto_original);
+		texto_original = texto_original_sem_quebras_artificiais;
+	}
+
+	int qtd_bytes_texto = strlen(texto_original);
+	guchar * bytes = NULL;
+	int tamanho_bytes = xchange_table_scan_stringUTF8(mew->hexv->xt, texto_original, qtd_bytes_texto, NULL);
+	if (tamanho_bytes > 0)
+	{
+		bytes = g_malloc(tamanho_bytes);
+		if (bytes == NULL)
+		{
+			g_free(texto_original);
+			return NULL;
+		}
+		int tamanho_bytes2 = xchange_table_scan_stringUTF8(mew->hexv->xt, texto_original, qtd_bytes_texto, bytes);
+		g_assert(tamanho_bytes == tamanho_bytes2);
+	}
+	g_free(texto_original);
+
+	if (length != NULL)
+		*length = tamanho_bytes;
+	return bytes;
+}
+
+static gboolean miniedition_activate(struct MiniEditionWindowData *mew)
+{
+	int resp;
+	guint8 * bytes = miniedition_convert_text_into_byte(mew, &resp);
+
+	if (bytes == NULL)
+		return FALSE;
+	// Confere tamanho
+	if (resp >= 0)
+	{
+		if (mew->hexv->editable)
+		{
+			off_t posicao_cursor = mew->hexv->cursor_position;
+			if (mew->hexv->selection_start != -1)
+			{
+				// Verifica se é de tamanho compatível com a seleção...
+				size_t comprimento_selecao;
+				if (mew->hexv->selection_end > mew->hexv->selection_start )
+				{
+					comprimento_selecao = mew->hexv->selection_end - mew->hexv->selection_start;
+					posicao_cursor = mew->hexv->selection_start;
+				}
+				else
+				{
+					comprimento_selecao = mew->hexv->selection_start - mew->hexv->selection_end;
+					posicao_cursor = mew->hexv->selection_end;
+				}
+				comprimento_selecao++;
+				if (comprimento_selecao > resp)
+				{
+					; // TODO:
+				}
+				else if (comprimento_selecao < resp)
+				{
+					if (mew->hexv->overwrite)
+						resp = comprimento_selecao; // TODO:
+				}
+				else
+					; // Nada para fazer, tudo ok.
+			}
+			// Hora de efetivar a inserção/substituição dos bytes
+			if (mew->hexv->overwrite)
+				xchange_hex_view_replace_bytes(mew->hexv, bytes, posicao_cursor, resp);
+			else
+			{
+				xchange_hex_view_delete_selection(mew->hexv);
+				xchange_hex_view_insert_bytes(mew->hexv, bytes, posicao_cursor, resp);
+			}
+			g_free(bytes);
+			gtk_widget_destroy(GTK_WIDGET(mew->window));
+			return TRUE;
+		}
+	}
+	g_free(bytes);
+	return FALSE;
+}
+
 static gboolean miniedition_key_press (GtkWidget *widget, GdkEventKey *event, gpointer data)
 {
 	struct MiniEditionWindowData *mew = data;
@@ -2034,83 +2135,38 @@ static gboolean miniedition_key_press (GtkWidget *widget, GdkEventKey *event, gp
 		return TRUE;
 	}
 
-	if (event->keyval == GDK_KEY_Return && (event->state & ~GDK_LOCK_MASK) == 0)
+	if (event->keyval == GDK_KEY_Return)
 	{
-		// Insere o texto
-		// Converte para bytes
-		GtkTextIter start, end;
-		GtkTextBuffer *text_buffer = GTK_TEXT_BUFFER(gtk_text_view_get_buffer(mew->view));
-		gtk_text_buffer_get_bounds(text_buffer, &start, &end);
-		gchar *texto_original = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
-		if (texto_original == NULL)
-			return TRUE;
-		gint tamanho_texto = strlen(texto_original);
-		if (tamanho_texto == 0)
+		guint64 estado = event->state & ~GDK_LOCK_MASK;
+		if ( estado == 0)
 		{
-			g_free(texto_original);
-			return TRUE;
+			// Insere o texto
+			// Converte para bytes
+			return miniedition_activate(mew);
 		}
-		gint chave_mais_comprida = xchange_table_get_largest_entry_length(mew->hexv->xt,TRUE);
-		if (chave_mais_comprida < 0)
-			chave_mais_comprida = 4;
-		gint tamanho_bytes = tamanho_texto* chave_mais_comprida;
-		guchar * bytes = g_malloc(tamanho_bytes);
-		if (bytes == NULL)
+		if (estado & GDK_CONTROL_MASK)
 		{
-			g_warning("Couldn't allocate data for bytes");
-			g_free(texto_original);
-			return TRUE;
-		}
-		int resp = xchange_table_scan_stringUTF8(mew->hexv->xt, texto_original, tamanho_texto, bytes);
-		g_free(texto_original);
-
-		// Confere tamanho
-		if (resp >= 0)
-		{
-			if (mew->hexv->editable)
+			// Fim de mensagem
+			int paragraph_length;
+			const gchar* paragraph = xchange_table_get_paragraph_markUTF8(mew->hexv->xt, &paragraph_length);
+			if (paragraph != NULL)
 			{
-				off_t posicao_cursor = mew->hexv->cursor_position;
-				if (mew->hexv->selection_start != -1)
-				{
-					// Verifica se é de tamanho compatível com a seleção...
-					size_t comprimento_selecao;
-					if (mew->hexv->selection_end > mew->hexv->selection_start )
-					{
-						comprimento_selecao = mew->hexv->selection_end - mew->hexv->selection_start;
-						posicao_cursor = mew->hexv->selection_start;
-					}
-					else
-					{
-						comprimento_selecao = mew->hexv->selection_start - mew->hexv->selection_end;
-						posicao_cursor = mew->hexv->selection_end;
-					}
-					comprimento_selecao++;
-					if (comprimento_selecao > resp)
-					{
-						; // TODO:
-					}
-					else if (comprimento_selecao < resp)
-					{
-						if (mew->hexv->overwrite)
-							resp = comprimento_selecao; // TODO:
-					}
-					else
-						; // Nada para fazer, tudo ok.
-				}
-				// Hora de efetivar a inserção/substituição dos bytes
-				if (mew->hexv->overwrite)
-					xchange_hex_view_replace_bytes(mew->hexv, bytes, posicao_cursor, resp);
-				else
-				{
-					xchange_hex_view_delete_selection(mew->hexv);
-					xchange_hex_view_insert_bytes(mew->hexv, bytes, posicao_cursor, resp);
-				}
-				g_free(bytes);
-				gtk_widget_destroy(GTK_WIDGET(mew->window));
-				return TRUE;
+				gtk_text_buffer_insert_at_cursor(GTK_TEXT_BUFFER(gtk_text_view_get_buffer(mew->view)), paragraph, paragraph_length);
 			}
+			return FALSE;
 		}
-		g_free(bytes);
+		if (estado & GDK_SHIFT_MASK)
+		{
+			// Fim de linha
+			int lineend_length;
+			const gchar* lineend = xchange_table_get_lineend_markUTF8(mew->hexv->xt, &lineend_length);
+			if (lineend != NULL)
+			{
+				gtk_text_buffer_insert_at_cursor(GTK_TEXT_BUFFER(gtk_text_view_get_buffer(mew->view)), lineend, lineend_length);
+			}
+			return FALSE;
+		}
+		return TRUE;
 	}
 
 	return FALSE;
@@ -2131,23 +2187,11 @@ static void miniedition_convert_text_bytes_(GtkTextBuffer *text_buffer, gpointer
 {
 	struct MiniEditionWindowData *mew = data;
 	GtkLabel *label_bytes = GTK_LABEL(mew->label_bytes);
-	if (!GTK_TEXT_BUFFER(text_buffer))
-		return;
-	GtkTextIter start, end;
-	gtk_text_buffer_get_bounds(text_buffer, &start, &end);
-	gchar *texto_original = gtk_text_buffer_get_text(text_buffer, &start, &end, FALSE);
-	int qtd_bytes_texto = strlen(texto_original);
-	guchar * bytes = NULL;
-	int tamanho_bytes = xchange_table_scan_stringUTF8(mew->hexv->xt, texto_original, qtd_bytes_texto, NULL);
-	if (tamanho_bytes > 0)
-	{
-		bytes = g_malloc(tamanho_bytes);
-		if (bytes == NULL)
-			return;
-		int tamanho_bytes2 = xchange_table_scan_stringUTF8(mew->hexv->xt, texto_original, qtd_bytes_texto, bytes);
-		g_assert(tamanho_bytes == tamanho_bytes2);
-	}
-	g_free(texto_original);
+
+	int tamanho_bytes;
+
+	guint8 *bytes = miniedition_convert_text_into_byte(mew, &tamanho_bytes);
+
 	if (tamanho_bytes > 0)
 	{
 		gchar *texto_bytes = g_malloc0(tamanho_bytes*3+1);
