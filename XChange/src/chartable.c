@@ -73,9 +73,9 @@ struct XChangeTable
 	// Special entries
 	unsigned char *unknown;
 	int unknown_length;
-	unsigned char *lineend_key;
+	uint8_t *lineend_key;
 	int lineend_key_length;
-	unsigned char *paragraph_key;
+	uint8_t *paragraph_key;
 	int paragraph_key_length;
 };
 
@@ -323,8 +323,7 @@ void xchange_table_close(XChangeTable *table)
 	free(table->entries_value);
 
 	free(table->unknown);
-	free(table->paragraph_key);
-	free(table->lineend_key);
+	// table->paragraph_key and table->lineend_key are freed when destroying their table->entries_key
 	free(table);
 }
 
