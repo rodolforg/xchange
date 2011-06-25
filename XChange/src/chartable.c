@@ -22,15 +22,23 @@
 #define DEFAULT_LINEEND_MARK "\xE2\x8F\x8E"
 #define DEFAULT_PARAGRAPH_MARK "\xC2\xB6"
 
+enum EntryType
+{
+	ENTRY_NORMAL,
+	ENTRY_LINEEND,
+	ENTRY_PARAGRAPH
+};
+
 typedef struct Entry
 {
 	uint8_t *key;
 	size_t nkey;
 	uint8_t* value;
 	size_t nvalue;
+	enum EntryType type;
 } Entry;
 
-static Entry *create_table_entry(uint8_t *key, size_t nkey, uint8_t *value, size_t nvalue);
+static Entry *create_table_entry(uint8_t *key, size_t nkey, uint8_t *value, size_t nvalue, enum EntryType type);
 static void destroy_table_entry(Entry *e);
 
 typedef struct EntryItem
@@ -255,6 +263,19 @@ XChangeTable * xchange_table_open(const char *path, TableType type, const char *
 	xt->nentries = nentries;
 	sort_table_entries(xt);
 
+	int n;
+	for (n = 0; n < nentries; n++)
+		if (xt->entries_key[n]->type == ENTRY_LINEEND)
+		{
+			xt->lineend_key = xt->entries_key[n]->key;
+			xt->lineend_key_length = xt->entries_key[n]->nkey;
+		}
+		else
+		if (xt->entries_key[n]->type == ENTRY_PARAGRAPH)
+		{
+			xt->paragraph_key = xt->entries_key[n]->key;
+			xt->paragraph_key_length = xt->entries_key[n]->nkey;
+		}
 
 	return xt;
 }
@@ -379,7 +400,7 @@ int xchange_table_get_largest_entry_length(const XChangeTable *table, int by_key
 	return by_key ? table->entries_key[id]->nkey : table->entries_key[id]->nvalue;
 }
 
-static Entry *create_table_entry(uint8_t *key, size_t nkey, uint8_t *value, size_t nvalue)
+static Entry *create_table_entry(uint8_t *key, size_t nkey, uint8_t *value, size_t nvalue, enum EntryType type)
 {
 	assert(key != NULL);
 	assert(value != NULL);
@@ -392,8 +413,8 @@ static Entry *create_table_entry(uint8_t *key, size_t nkey, uint8_t *value, size
 	e->value = value;
 	e->nkey = nkey;
 	e->nvalue = nvalue;
-//	e->next = NULL;
-
+	e->type = type;
+	//	e->next = NULL;
 	return e;
 }
 
@@ -760,7 +781,7 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 				{
 					memcpy(value,DEFAULT_PARAGRAPH_MARK,value_length);
 
-					Entry *e = create_table_entry(key, key_text_length/2, value, value_length);
+					Entry *e = create_table_entry(key, key_text_length/2, value, value_length, ENTRY_PARAGRAPH);
 					if (e == NULL)
 						perror("creating table entry"); // FIXME
 					else
@@ -791,7 +812,7 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 				{
 					memcpy(value,DEFAULT_LINEEND_MARK,value_length);
 
-					Entry *e = create_table_entry(key, key_text_length/2, value, value_length);
+					Entry *e = create_table_entry(key, key_text_length/2, value, value_length, ENTRY_LINEEND);
 					if (e == NULL)
 						perror("creating table entry"); // FIXME
 					else
@@ -838,7 +859,7 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 					continue;
 				}
 				memcpy(value, &line[pos_value], value_length);
-				Entry *e = create_table_entry(key, pos/2, value, value_length);
+				Entry *e = create_table_entry(key, pos/2, value, value_length, ENTRY_NORMAL);
 				if (e == NULL)
 				{
 					free(key);
