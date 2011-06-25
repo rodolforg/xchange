@@ -920,7 +920,7 @@ static XChangeTable *carregar_tabela(const char *filename, const char *encoding)
 		return NULL;
 	}
 
-	xchange_table_set_unknown_char(xt, preferencias.caractere_desconhecido, -1);
+	xchange_table_set_unknown_charUTF8(xt, preferencias.caractere_desconhecido, -1);
 
 	return xt;
 }
@@ -947,7 +947,7 @@ static void altera_padrao_codificacao_caracteres(char * encoding, gpointer data)
 		g_free(rotulo);
 		gtk_action_set_short_label(radioaction_visao_codificao_padronizada, encoding);
 
-		xchange_table_set_unknown_char(xt_new, preferencias.caractere_desconhecido, -1);
+		xchange_table_set_unknown_charUTF8(xt_new, preferencias.caractere_desconhecido, -1);
 
 		set_current_table(0);
 	}
@@ -1523,7 +1523,7 @@ static uint8_t *recupera_bytes(const char *texto, int *tamanho_bytes, const char
 	if (tamanho_texto == 0)
 		return NULL;
 
-	uint8_t *bytes_chave = malloc(tamanho_texto/2+1);
+	uint8_t *bytes_chave = g_malloc((tamanho_texto+1)/2);
 	if (bytes_chave == NULL)
 	{
 		gdk_window_beep(gtk_widget_get_window(main_window));
@@ -1592,7 +1592,7 @@ static uint8_t *recupera_bytes(const char *texto, int *tamanho_bytes, const char
 			continue;
 		}
 
-		free(bytes_chave);
+		g_free(bytes_chave);
 		gdk_window_beep(gtk_widget_get_window(main_window));
 		if (contexto != NULL)
 			pipoca_na_barra_de_estado(contexto, "Não conseguiu converter o texto em bytes!");
