@@ -41,7 +41,7 @@ struct Janelas
 	GtkEntry *entry_caractere_para_desconhecido;
 	GtkEntry *entry_caractere_para_nulo;
 	GtkEntry *entry_caractere_para_novalinha;
-	GtkEntry *entry_caractere_para_paragrafo;
+	GtkEntry *entry_caractere_para_fimmensagem;
 };
 typedef struct Janelas Janelas;
 
@@ -490,7 +490,7 @@ static gboolean carrega_dialogo_do_builder(struct ManipuladorPreferencias *dados
 	dados->janelas.entry_caractere_para_desconhecido = GTK_ENTRY(gtk_builder_get_object(builder, "entry_caractere_para_desconhecido"));
 	dados->janelas.entry_caractere_para_nulo = GTK_ENTRY(gtk_builder_get_object(builder, "entry_caractere_para_nulo"));
 	dados->janelas.entry_caractere_para_novalinha = GTK_ENTRY(gtk_builder_get_object(builder, "entry_caractere_para_novalinha"));
-	dados->janelas.entry_caractere_para_paragrafo = GTK_ENTRY(gtk_builder_get_object(builder, "entry_caractere_para_paragrafo"));
+	dados->janelas.entry_caractere_para_fimmensagem = GTK_ENTRY(gtk_builder_get_object(builder, "entry_caractere_para_fimmensagem"));
 
 	g_object_unref(builder);
 
@@ -538,7 +538,7 @@ static void configura_dialogo(const struct ManipuladorPreferencias *dados)
 	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_caractere_para_desconhecido), dados->preferencias->caractere_desconhecido);
 	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_caractere_para_nulo), dados->preferencias->caractere_nulo);
 	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_caractere_para_novalinha), dados->preferencias->caractere_novalinha);
-	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_caractere_para_paragrafo), dados->preferencias->caractere_fimmensagem);
+	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_caractere_para_fimmensagem), dados->preferencias->caractere_fimmensagem);
 
 }
 
@@ -973,4 +973,52 @@ void on_entry_caractere_para_nulo_changed(GtkEntry *entry, gpointer data)
 	dados->preferencias->caractere_nulo = g_strdup(valor);
 
 	xchange_hex_view_set_null_character_replacement(XCHANGE_HEX_VIEW(dados->janelas.hexv), valor);
+}
+
+void on_entry_caractere_para_novalinha_changed(GtkEntry *entry, gpointer data)
+{
+	struct ManipuladorPreferencias *dados = data;
+	const gchar *valor;
+
+	valor = gtk_entry_get_text(entry);
+	if (g_utf8_strlen(valor, -1)!=0)
+		g_key_file_set_string(dados->keyfile, "Painel Texto", "Caractere quebra de linha", valor);
+	else
+	{
+		g_key_file_remove_key(dados->keyfile, "Painel Texto", "Caractere quebra de linha", NULL);
+		valor = "\xE2\x8F\x8E";
+	}
+
+	g_free(dados->preferencias->caractere_novalinha);
+	dados->preferencias->caractere_novalinha = g_strdup(valor);
+
+	int n;
+	for (n = 0; n < qtd_tabelas; n++)
+		if (xt_tabela[n] != NULL)
+			xchange_table_set_lineend_markUTF8(xt_tabela[n], valor, -1);
+	gtk_widget_queue_draw(dados->janelas.hexv);
+}
+
+void on_entry_caractere_para_fimmensagem_changed(GtkEntry *entry, gpointer data)
+{
+	struct ManipuladorPreferencias *dados = data;
+	const gchar *valor;
+
+	valor = gtk_entry_get_text(entry);
+	if (g_utf8_strlen(valor, -1)!=0)
+		g_key_file_set_string(dados->keyfile, "Painel Texto", "Caractere fim de mensagem", valor);
+	else
+	{
+		g_key_file_remove_key(dados->keyfile, "Painel Texto", "Caractere fim de mensagem", NULL);
+		valor = "\xC2\xB6";
+	}
+
+	g_free(dados->preferencias->caractere_fimmensagem);
+	dados->preferencias->caractere_fimmensagem = g_strdup(valor);
+
+	int n;
+	for (n = 0; n < qtd_tabelas; n++)
+		if (xt_tabela[n] != NULL)
+			xchange_table_set_paragraph_markUTF8(xt_tabela[n], valor, -1);
+	gtk_widget_queue_draw(dados->janelas.hexv);
 }
