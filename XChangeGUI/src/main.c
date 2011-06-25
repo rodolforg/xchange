@@ -91,7 +91,7 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data);
 
 static void inicia_dados_localizar();
 static void destroi_dados_localizar();
-static uint8_t *recupera_bytes(const char *texto, int *tamanho_bytes, const char *contexto);
+static uint8_t *recupera_bytes_de_texto_hexa(const char *texto, int *tamanho_bytes, const char *contexto);
 static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes, const char *contexto);
 
 
@@ -1260,7 +1260,7 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 	}
 
 	int tamanho_bytes;
-	uint8_t * bytes = recupera_bytes(texto, &tamanho_bytes, NULL);
+	uint8_t * bytes = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, NULL);
 	if (bytes == NULL)
 	{
 		// Não é uma sequência de bytes...
@@ -1514,7 +1514,7 @@ static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes,
 	return bytes_chave;
 }
 
-static uint8_t *recupera_bytes(const char *texto, int *tamanho_bytes, const char *contexto)
+static uint8_t *recupera_bytes_de_texto_hexa(const char *texto, int *tamanho_bytes, const char *contexto)
 {
 	if (texto == NULL)
 		return NULL;
@@ -1618,7 +1618,7 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, gboolean back_
 	else
 	{
 		// A string é uma sequência de bytes
-		bytes_chave = recupera_bytes(texto_a_localizar, &tamanho_bytes, "Localização");
+		bytes_chave = recupera_bytes_de_texto_hexa(texto_a_localizar, &tamanho_bytes, "Localização");
 	}
 	if (bytes_chave == NULL)
 		return FALSE;
@@ -1696,7 +1696,7 @@ void on_action_localizar_activate(GtkAction *action, gpointer data)
 	else
 	{
 		// A string é uma sequência de bytes
-		bytes_chave = recupera_bytes(texto, &tamanho_bytes, "Localização");
+		bytes_chave = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, "Localização");
 	}
 	if (bytes_chave == NULL)
 		return;
