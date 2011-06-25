@@ -950,7 +950,7 @@ void on_entry_caractere_para_desconhecido_changed(GtkEntry *entry, gpointer data
 	int n;
 	for (n = 0; n < qtd_tabelas; n++)
 		if (xt_tabela[n] != NULL)
-			xchange_table_set_unknown_char(xt_tabela[n], valor, -1);
+			xchange_table_set_unknown_charUTF8(xt_tabela[n], valor, -1);
 	gtk_widget_queue_draw(dados->janelas.hexv);
 }
 
