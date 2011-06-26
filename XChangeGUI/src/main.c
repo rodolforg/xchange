@@ -109,6 +109,7 @@ void on_radioaction_visao_codificao_padronizada_changed(GtkRadioAction *action, 
 G_MODULE_EXPORT
 void on_fontbutton_painel_bytes_font_set(GtkFontButton *fontbutton, gpointer data);
 
+static void mostraMensagemErro(gchar *msg);
 
 int mostra_janela()
 {
@@ -121,7 +122,7 @@ int mostra_janela()
 	{
 		g_warning("Erro: %s\n", err->message);
 		g_error_free(err);
-		return 1;
+		return 0;
 	}
 
 	gtk_builder_connect_signals(builder, NULL);
@@ -190,8 +191,8 @@ int mostra_janela()
 	XChangeFile * xf = xchange_open(NULL, NULL);
 	hexv = xchange_hex_view_new(xf);
 	gtk_container_add(GTK_CONTAINER(scrolled_window), hexv);
-	//	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scrolled_window), hexv);
-	//	gtk_layout_put(GTK_LAYOUT(scrolled_window), hexv, 0, 0);
+
+
 	g_signal_connect(hexv, "cursor-moved", G_CALLBACK(mudou_posicao_cursor),
 			main_window);
 	g_signal_connect(hexv, "edition-mode-changed", G_CALLBACK(mudou_modo_edicao),
@@ -283,7 +284,11 @@ int main(int argc, char *argv[])
 
 	g_set_application_name ("heXchange");
 
-	mostra_janela();
+	if (!mostra_janela())
+	{
+		mostraMensagemErro("Não foi possível carregar a interface.");
+		exit(EXIT_FAILURE);
+	}
 
 	inicia_preferencias_padrao(&preferencias);
 	if ( ! carrega_arquivo_preferencias(XCHANGE_HEX_VIEW(hexv), &preferencias) )
@@ -333,14 +338,6 @@ int main(int argc, char *argv[])
 	}
 
 	gtk_main();
-
-	if (preferencias.salvar_posicao_tamanho_janela)
-		; // TODO: Salvar...
-	if (preferencias.lembrar_arquivos_recentes)
-		; // TODO: Lembrar...
-	if (preferencias.lembrar_diretorio && ultimo_diretorio != NULL)
-		// FIXME: preferenciasKeyFile não existe
-		;//g_key_file_set_string(preferenciasKeyFile, "Arquivos", "Último diretório", ultimo_diretorio);
 
 	salva_preferencias_se_necessario(); // FIXME argumentos
 
@@ -643,8 +640,6 @@ G_MODULE_EXPORT void on_action_salvar_como_activate(GtkAction *action,
 		nome_arquivo = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 
 		char *filename_decoded = g_locale_from_utf8(nome_arquivo, -1, NULL, NULL, NULL);
-		//xchange_save_as(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)),
-		//		filename_decoded);
 		xchange_hex_view_save_file(XCHANGE_HEX_VIEW(hexv), filename_decoded);
 		g_free(filename_decoded);
 
@@ -652,7 +647,7 @@ G_MODULE_EXPORT void on_action_salvar_como_activate(GtkAction *action,
 		nomeArquivoAtual = g_strdup(nome_arquivo);
 		g_free(ultimo_diretorio);
 		ultimo_diretorio = g_path_get_dirname(nome_arquivo);
-		// g_free(nome_arquivo); // Usando abaixo
+
 		file_changes_saved = TRUE;
 		changes_since_save = 0;
 		changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
@@ -672,48 +667,24 @@ G_MODULE_EXPORT void on_action_salvar_activate(GtkAction *action, gpointer data)
 {
 	limpa_barra_de_estado("Arquivo");
 
-	//gint result = GTK_RESPONSE_OK;
-	//GtkWidget * dialog = NULL;
 	if (nomeArquivoAtual == NULL)
 	{
-		/*
-		dialog = gtk_file_chooser_dialog_new("Salvar arquivo...", GTK_WINDOW(
-				main_window), GTK_FILE_CHOOSER_ACTION_SAVE, GTK_STOCK_SAVE,
-				GTK_RESPONSE_OK, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, NULL);
-
-		if (ultimo_diretorio != NULL)
-			gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-					ultimo_diretorio);
-
-		result = gtk_dialog_run(GTK_DIALOG(dialog));
-		nomeArquivoAtual = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(
-				dialog));
-		g_free(ultimo_diretorio);
-		ultimo_diretorio = g_path_get_dirname(nomeArquivoAtual);
-		gtk_widget_destroy(dialog);
-		*/
 		on_action_salvar_como_activate(action, data);
 		return;
 	}
 
-	//if (result == GTK_RESPONSE_OK)
+	if (!xchange_save(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
 	{
-		if (!xchange_save(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
-		{
-			perror("Salvando");
-			mostraMensagemErro("Erro ao salvar.\nExperimente \"salvar como\" ou \"como cópia\"\n");
-		}
-		else
-		{
-			pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
-			file_changes_saved = TRUE;
-			changes_since_save = 0;
-			changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
-			gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
-		}
-		//mostraMensagemErro("Não implementado - Salve como ou como cópia\n");
-		//g_free(ultimo_diretorio);
-		//ultimo_diretorio = g_path_get_dirname(filename);
+		perror("Salvando");
+		mostraMensagemErro("Erro ao salvar.\nExperimente \"salvar como\" ou \"como cópia\"\n");
+	}
+	else
+	{
+		pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
+		file_changes_saved = TRUE;
+		changes_since_save = 0;
+		changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
+		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 	}
 }
 
@@ -752,7 +723,7 @@ G_MODULE_EXPORT void on_action_salvar_copia_activate(GtkAction *action,
 G_MODULE_EXPORT gboolean on_main_window_delete_event(GtkWidget *widget,
 		GdkEvent *event, gpointer data)
 {
-	if (file_changes_saved)//!xchange_has_undo(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
+	if (file_changes_saved)
 	{
 		fecharPrograma();
 		return FALSE;
@@ -773,7 +744,7 @@ G_MODULE_EXPORT gboolean on_main_window_delete_event(GtkWidget *widget,
 
 G_MODULE_EXPORT void on_action_sair_activate(GtkAction *action, gpointer data)
 {
-	if (file_changes_saved)//!xchange_has_undo(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
+	if (file_changes_saved)
 	{
 		fecharPrograma();
 		return;
@@ -937,7 +908,6 @@ static void set_current_table(int id)
 
 static void altera_padrao_codificacao_caracteres(char * encoding, gpointer data)
 {
-	//char *encoding = obtem_escolha_codificao(GTK_COMBO_BOX(comboboxentry_codificacao_caracteres));
 	XChangeTable * xt_new = xchange_table_create_from_encoding(encoding);
 	if (xt_new != NULL)
 	{
@@ -967,7 +937,6 @@ static void altera_padrao_codificacao_caracteres(char * encoding, gpointer data)
 		else
 			pipoca_na_barra_de_estado("Codificação de caracteres", "Não é possível detectar automaticamente uma codificação para esse fim.");
 	}
-	//g_free(encoding);
 }
 
 G_MODULE_EXPORT
@@ -982,7 +951,7 @@ void on_menuitem_codificacao_padrao_activate(GtkMenuItem *menuitem, gpointer dat
 	g_object_get_property(G_OBJECT(menuitem), "use-underline", &valor);
 	if (g_value_get_boolean(&valor))
 	{
-		// TODO: Remover sublinha
+		// Remover sublinha
 		gchar **itens = g_strsplit (encoding, "_", 20);
 		if (itens != NULL)
 		{
@@ -1257,7 +1226,7 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 	if (texto == NULL)
 		return;
 
-	// TODO: Colar - escanear para ver se são bytes em hexadecimal ou texto mesmo...
+	// Verifica se é um texto UTF-8, sendo byte ou não...
 	if (g_utf8_strlen(texto, -1) == 0)
 	{
 		g_free(texto);
@@ -1268,7 +1237,7 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 	uint8_t * bytes = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, NULL);
 	if (bytes == NULL)
 	{
-		// Não é uma sequência de bytes...
+		// Não é uma sequência de bytes. Tenta converter pela codificação.
 		bytes = converte_pela_codificacao(texto, &tamanho_bytes, NULL);
 	}
 
@@ -1290,7 +1259,6 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 			{
 				free(bytes);
 				g_free(texto);
-				//mostraMensagemErro("A colagem de texto ainda não foi implementada!");
 				return;
 			}
 			if (selecionado)
@@ -1307,7 +1275,6 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 					{
 						free(bytes);
 						g_free(texto);
-						//mostraMensagemErro("A colagem de texto ainda não foi implementada!");
 						return;
 					}
 				}
@@ -1323,7 +1290,6 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 						{
 							free(bytes);
 							g_free(texto);
-							//mostraMensagemErro("A colagem de texto ainda não foi implementada!");
 							return;
 						}
 					}
@@ -1333,7 +1299,6 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 						{
 							free(bytes);
 							g_free(texto);
-							//mostraMensagemErro("A colagem de texto ainda não foi implementada!");
 							return;
 						}
 						xchange_hex_view_insert_bytes(XCHANGE_HEX_VIEW(hexv), bytes + tamanho_selecao, offset_inicio + tamanho_selecao, tamanho_bytes - tamanho_selecao);
@@ -1345,7 +1310,6 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 					{
 						free(bytes);
 						g_free(texto);
-						//mostraMensagemErro("A colagem de texto ainda não foi implementada!");
 						return;
 					}
 				}
@@ -1654,7 +1618,6 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, gboolean back_
 		return FALSE;
 	}
 
-
 	// Encontrou: vai para onde foi encontrado
 	xchange_hex_view_goto(XCHANGE_HEX_VIEW(hexv), achou);
 	// Selecionar a busca
@@ -1864,7 +1827,6 @@ static void mudou_selecao(XChangeHexView *hexv, gpointer data)
 {
 	off_t inicio, fim;
 
-
 	if (xchange_hex_view_get_selection_bounds(hexv, &inicio, &fim))
 	{
 		gchar *texto = g_strdup_printf("Seleção de x%1$08lX a x%2$08lX (%3$lu / x%3$lX bytes)", inicio, fim, fim-inicio+1);
@@ -1885,12 +1847,6 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data)
 
 
 	limpa_barra_de_estado("Arquivo");
-/*
-	changes_since_save ++;
-	g_print("changes: %i\n",changes_since_save);
-	if (changes_since_save == 0)
-		file_changes_saved = TRUE;
-	else*/
 
 	if (changes_until_last_save == xchange_get_undo_list_size(xf))
 	{
@@ -1907,6 +1863,7 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data)
 G_MODULE_EXPORT
 void on_action_abre_preferencias_activate(GtkAction *action, gpointer data)
 {
-	abrir_dialogo_preferencias(&preferencias);
+	if (!abrir_dialogo_preferencias(&preferencias))
+		mostraMensagemErro("Não conseguiu abrir a janela de preferências.");
 }
 
