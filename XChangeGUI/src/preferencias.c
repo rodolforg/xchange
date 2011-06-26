@@ -116,6 +116,7 @@ gboolean carrega_arquivo_preferencias(XChangeHexView *hexv, Preferencias *prefer
 
 	if (!g_key_file_load_from_file(keyfile, nomearq_pref, G_KEY_FILE_KEEP_COMMENTS|G_KEY_FILE_KEEP_TRANSLATIONS, &erro))
 	{
+		g_error_free(erro);
 	}
 	g_free(nomearq_pref);
 
