@@ -7,6 +7,7 @@
 
 #include "chartable.h"
 #include "file.h"
+#include <stdlib.h>
 #include <iconv.h>
 #include <string.h>
 #include <errno.h>
@@ -685,12 +686,12 @@ static size_t search_byte(const uint8_t *buffer, size_t size, uint8_t byte)
 
 static int utf8_is_digit(uint8_t byte)
 {
-	return byte >= 0x30 && byte <= 0x39;
+	return byte >= UTF8_0 && byte <= UTF8_9;
 }
 
 static int utf8_is_hexdigit(uint8_t byte)
 {
-	return (byte >= 0x30 && byte <= 0x39) || (byte >= 0x41 && byte <= 0x46) || (byte >= 0x61 && byte <= 0x66);
+	return (byte >= UTF8_0 && byte <= UTF8_9) || (byte >= UTF8_A && byte <= UTF8_F) || (byte >= UTF8_a && byte <= UTF8_f);
 }
 
 static int utf8_is_whitespace(uint8_t byte)
@@ -700,12 +701,12 @@ static int utf8_is_whitespace(uint8_t byte)
 
 static uint8_t utf8_from_hex(char character)
 {
-	if (character <= 0x39)
-		return character - 0x30;
-	if (character <= 0x46)
-		return character - 0x41 + 10;
-	if (character <= 0x66)
-		return character - 0x61 + 10;
+	if (character <= UTF8_9)
+		return character - UTF8_0;
+	if (character <= UTF8_F)
+		return character - UTF8_A + 10;
+	if (character <= UTF8_f)
+		return character - UTF8_a + 10;
 	return (uint8_t)-1;
 }
 
@@ -767,12 +768,26 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 		if (line[0] == '*')
 		{
 			int key_text_length = line_length-1;
-			uint8_t *key = utf8_get_hex(&line[1], key_text_length);
+			uint8_t *key = NULL;
+			if (key_text_length > 0)
+			{
+				if (line[1] == UTF8_EQUAL_SIGN)
+				{
+					key_text_length--;
+					if (key_text_length > 0)
+						key = utf8_get_hex(&line[2], key_text_length);
+				}
+				else
+					key = utf8_get_hex(&line[1], key_text_length);
+			}
 			if (key == NULL)
-				; // FIXME
+			{
+				fprintf(stderr, "table line malformed (line #%i)\n", line_number); // FIXME
+				continue;
+			}
 			else
 			{
-				int value_length = strlen(DEFAULT_PARAGRAPH_MARK);
+				size_t value_length = strlen(DEFAULT_PARAGRAPH_MARK);
 				uint8_t *value = malloc(value_length);
 				if (value == NULL)
 					perror("allocating table entry value"); // FIXME
@@ -798,12 +813,26 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 		if (line[0] == '/')
 		{
 			int key_text_length = line_length-1;
-			uint8_t *key = utf8_get_hex(&line[1], key_text_length);
+			uint8_t *key = NULL;
+			if (key_text_length > 0)
+			{
+				if (line[1] == UTF8_EQUAL_SIGN)
+				{
+					key_text_length--;
+					if (key_text_length > 0)
+						key = utf8_get_hex(&line[2], key_text_length);
+				}
+				else
+					key = utf8_get_hex(&line[1], key_text_length);
+			}
 			if (key == NULL)
-				continue; // FIXME
+			{
+				fprintf(stderr, "table line malformed (line #%i)\n", line_number); // FIXME
+				continue;
+			}
 			else
 			{
-				int value_length = strlen(DEFAULT_LINEEND_MARK);
+				size_t value_length = strlen(DEFAULT_LINEEND_MARK);
 				uint8_t *value = malloc(value_length);
 				if (value == NULL)
 					perror("allocating table entry value"); // FIXME
@@ -846,14 +875,14 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 				uint8_t *key = utf8_get_hex(line, pos);
 				if (key == NULL)
 				{
-					fprintf(stderr, "Error while reading hexadecimal key from table (line %i)\n", line_number); // FIXME
+					fprintf(stderr, "Error while reading hexadecimal key from table (line #%i)\n", line_number); // FIXME
 					continue;
 				}
 				uint8_t *value = malloc(value_length);
 				if (value == NULL)
 				{
 					free(key);
-					fprintf(stderr, "Error while storing value from table (line %i)\n", line_number); // FIXME
+					fprintf(stderr, "Error while storing value from table (line #%i)\n", line_number); // FIXME
 					perror("Reason");
 					continue;
 				}
@@ -863,13 +892,13 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 				{
 					free(key);
 					free(value);
-					fprintf(stderr, "Error creating entry for table (line %i)\n", line_number); // FIXME
+					fprintf(stderr, "Error creating entry for table (line #%i)\n", line_number); // FIXME
 					continue;
 				}
 				if (!entry_list_insert(list, e))
 				{
 					destroy_table_entry(e);
-					fprintf(stderr, "Error while inserting entry from table (line %i)\n", line_number); // FIXME
+					fprintf(stderr, "Error while inserting entry from table (line #%i)\n", line_number); // FIXME
 					continue;
 				}
 
@@ -1086,17 +1115,17 @@ int xchange_table_print_stringUTF8(const XChangeTable *table,
 		if (n != table->nentries)
 		{
 			if (text != NULL)
-				memcpy(text+outpos, e->value, e->nvalue); // FIXME: convert encoding!
-			outpos += e->nvalue; // FIXME convert encoding!
+				memcpy(text+outpos, e->value, e->nvalue);
+			outpos += e->nvalue;
 			inpos += e->nkey;
 		}
 		else
 		{
 			if (text != NULL)
 			{
-				memcpy(text+outpos, table->unknown, unknown_character_length); // FIXME convert encoding!
+				memcpy(text+outpos, table->unknown, unknown_character_length);
 			}
-			outpos+=unknown_character_length; // FIXME convert encoding!
+			outpos+=unknown_character_length;
 			inpos++;
 		}
 	}
@@ -1118,7 +1147,7 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 	{
 		char *tmpbuffer = NULL;
 		char *inbuf = bytes;
-		size_t inleft = min_read; // FIXME: Garantir que vai ler pelo menos min_read bytes
+		size_t inleft = min_read;
 		char *outbuf = text;
 		size_t outsize = 4*size;
 		size_t outleft = outsize;
@@ -1220,8 +1249,6 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 			}
 			if (error)
 				break;
-			//fprintf(stderr, "Texto: %s\n", text);
-			//fprintf(stderr, "Depois: Inleft: %zu Outleft: %zu Outsize: %zu\n", inleft, outleft, outsize);
 		}
 		if (read != NULL)
 			*read = min_read - inleft;
