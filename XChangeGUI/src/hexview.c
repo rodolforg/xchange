@@ -12,6 +12,7 @@
 #include <pango/pangocairo.h>
 
 #include <string.h> // For Miniedition...
+#include <stdlib.h>
 
 #define MARGIN_OFFSET_TEXT 3
 #define LINE_SPACEMENT 5
