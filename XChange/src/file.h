@@ -10,7 +10,6 @@
 #define HEXCHANGE_FILE_H
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <sys/types.h>
 
 typedef struct XChangeFile XChangeFile;
