@@ -452,12 +452,9 @@ static gboolean carrega_dialogo_do_builder(struct ManipuladorPreferencias *dados
 {
 	GtkBuilder * builder = gtk_builder_new();
 
-	GError *err = NULL;
-	gtk_builder_add_from_file(builder, "prefs.gui", &err);
-	if (err != NULL)
+	if (!carrega_arquivo_interface(builder, "prefs.gui"))
 	{
-		g_warning("Erro: %s\n", err->message);
-		g_error_free(err);
+		g_object_unref(builder);
 		return FALSE;
 	}
 

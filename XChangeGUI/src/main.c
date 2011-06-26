@@ -111,19 +111,77 @@ void on_fontbutton_painel_bytes_font_set(GtkFontButton *fontbutton, gpointer dat
 
 static void mostraMensagemErro(gchar *msg);
 
-int mostra_janela()
+/* liberar com g_strfreev*/
+gchar **obtem_lista_data_dir()
 {
+	const gchar *nome_programa = g_get_prgname();
+	const gchar * const * system_data_dirs = g_get_system_data_dirs ();
+	gint m, max;
+	for (m = 0; system_data_dirs[m]!=NULL; ++m)
+		;
+	max = m;
 
-	GtkBuilder * builder = gtk_builder_new();
+	const gchar * user_data_dir = g_get_user_data_dir ();
 
-	GError *err = NULL;
-	gtk_builder_add_from_file(builder, "gui.xml", &err);
-	if (err != NULL)
-	{
-		g_warning("Erro: %s\n", err->message);
-		g_error_free(err);
-		return 0;
+	gchar **diretorios = g_try_malloc(sizeof(gchar*)*(max+3));
+	if (diretorios == NULL)
+		return NULL;
+
+	diretorios[0] = g_strdup("./");
+	diretorios[1] = g_strdup_printf("%s/%s/", user_data_dir, nome_programa);
+	for (m = 0; m < max; ++m) {
+		diretorios[m+2] = g_strdup_printf("%s/%s/", system_data_dirs[m], nome_programa);
 	}
+	diretorios[max+2] = NULL;
+
+	return diretorios;
+}
+
+gboolean carrega_arquivo_interface(GtkBuilder *builder, const gchar *arquivo)
+{
+	GError *err = NULL;
+	gchar *caminho;
+	gchar **pastas;
+
+	pastas = obtem_lista_data_dir();
+	if (pastas == NULL)
+		return FALSE;
+
+	int m;
+	for (m = 0; pastas[m] != NULL; m++)
+	{
+		caminho = g_strdup_printf("%s%s", pastas[m], arquivo);
+		gtk_builder_add_from_file(builder, caminho, &err);
+		g_free(caminho);
+		if (err != NULL)
+		{
+			g_error_free(err);
+			err = NULL;
+		}
+		else
+		{
+			m = -1;
+			break;
+		}
+	}
+	g_strfreev(pastas);
+
+	if (m >= 0)
+		return FALSE;
+
+	return TRUE;
+}
+
+static gboolean mostra_janela()
+{
+	GtkBuilder * builder;
+
+	builder = gtk_builder_new();
+	if (builder == NULL)
+		return FALSE;
+
+	if (!carrega_arquivo_interface(builder, "gui.xml"))
+		g_object_unref(builder);
 
 	gtk_builder_connect_signals(builder, NULL);
 
@@ -208,7 +266,7 @@ int mostra_janela()
 
 	gtk_widget_grab_focus(hexv);
 
-	return 1;
+	return TRUE;
 }
 
 void limpa_barra_de_estado(const char* contexto)

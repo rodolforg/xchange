@@ -20,4 +20,6 @@ extern GtkWidget *menu_item_abrir_recente;
 extern gint qtd_tabelas;
 extern XChangeTable **xt_tabela;
 
+gboolean carrega_arquivo_interface(GtkBuilder *builder, const gchar *arquivo);
+
 #endif /* MAIN_H_ */
