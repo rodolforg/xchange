@@ -45,8 +45,12 @@ GtkWidget *dialog_sobre;
 
 GtkWidget *dialog_localizar;
 GtkWidget *entry_valor_a_localizar;
-GtkWidget *radiobutton_pesquisar_do_inicio;
-GtkWidget *radiobutton_pesquisar_do_cursor;
+GtkWidget *radiobutton_localizar_do_inicio;
+GtkWidget *radiobutton_localizar_do_cursor;
+GtkWidget *radiobutton_localizar_no_intervalo;
+GtkWidget *table_localizar_no_intervalo;
+GtkAdjustment *adjustment_inicio_localizar;
+GtkAdjustment *adjustment_fim_localizar;
 GtkWidget *radiobutton_localizar_texto;
 GtkWidget *radiobutton_localizar_bytes;
 GtkWidget *checkbutton_localizar_para_tras;
@@ -73,9 +77,14 @@ gint id_tabela_atual;
 gchar *ultimo_diretorio;
 char *nomeArquivoAtual;
 
-gchar *texto_a_localizar;
-gboolean localizando_proximo;
-gboolean localizando_bytes;
+struct DadosLocalizar
+{
+	gchar *texto_a_localizar;
+	gboolean localizando_proximo;
+	gboolean localizando_bytes;
+	guint64 inicio;
+	guint64 fim;
+} dados_localizar;
 
 GKeyFile* preferenciasKeyFile;
 Preferencias preferencias;
@@ -90,8 +99,8 @@ static void mudou_selecao(XChangeHexView *hexv, gpointer data);
 static void mudou_conteudo(XChangeHexView *hexv, gpointer data);
 
 
-static void inicia_dados_localizar();
-static void destroi_dados_localizar();
+static void inicia_dados_localizar(struct DadosLocalizar *);
+static void destroi_dados_localizar(struct DadosLocalizar *);
 static uint8_t *recupera_bytes_de_texto_hexa(const char *texto, int *tamanho_bytes, const char *contexto);
 static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes, const char *contexto);
 
@@ -208,10 +217,18 @@ static gboolean mostra_janela()
 			"dialog_localizar"));
 	entry_valor_a_localizar = GTK_WIDGET(gtk_builder_get_object(builder,
 			"entry_valor_a_localizar"));
-	radiobutton_pesquisar_do_inicio = GTK_WIDGET(gtk_builder_get_object(
-			builder, "radiobutton_pesquisar_do_inicio"));
-	radiobutton_pesquisar_do_cursor = GTK_WIDGET(gtk_builder_get_object(
-			builder, "radiobutton_pesquisar_do_cursor"));
+	radiobutton_localizar_do_inicio = GTK_WIDGET(gtk_builder_get_object(
+			builder, "radiobutton_localizar_do_inicio"));
+	radiobutton_localizar_do_cursor = GTK_WIDGET(gtk_builder_get_object(
+			builder, "radiobutton_localizar_do_cursor"));
+	radiobutton_localizar_no_intervalo = GTK_WIDGET(gtk_builder_get_object(
+			builder, "radiobutton_localizar_no_intervalo"));
+	table_localizar_no_intervalo = GTK_WIDGET(gtk_builder_get_object(
+			builder, "table_localizar_no_intervalo"));
+	adjustment_inicio_localizar = GTK_ADJUSTMENT(gtk_builder_get_object(
+			builder, "adjustment_inicio_localizar"));
+	adjustment_fim_localizar = GTK_ADJUSTMENT(gtk_builder_get_object(
+			builder, "adjustment_fim_localizar"));
 	radiobutton_localizar_texto = GTK_WIDGET(gtk_builder_get_object(
 			builder, "radiobutton_localizar_texto"));
 	radiobutton_localizar_bytes = GTK_WIDGET(gtk_builder_get_object(
@@ -387,7 +404,7 @@ int main(int argc, char *argv[])
 	elabora_menu_recentes();
 
 	// Preparando dados de localização
-	inicia_dados_localizar();
+	inicia_dados_localizar(&dados_localizar);
 
 	if (argc > 1)
 	{
@@ -405,7 +422,7 @@ int main(int argc, char *argv[])
 	g_free(ultimo_diretorio);
 
 	// Destrói dados de localização
-	destroi_dados_localizar();
+	destroi_dados_localizar(&dados_localizar);
 
 	for (n = 0; n < qtd_tabelas; n++)
 		xchange_table_close(xt_tabela[n]);
@@ -851,12 +868,12 @@ static gchar *obtem_escolha_codificacao(GtkComboBox *combobox)
 	}
 	else
 	{
-		char *tmp_encoding = NULL;
+		gchar *tmp_encoding = NULL;
 
 #if GTK_CHECK_VERSION(2,24,0)
 		if (gtk_combo_box_get_has_entry(combobox))
 		{
-			const char *tmp_encoding2 = gtk_entry_get_text (GTK_ENTRY (gtk_bin_get_child (GTK_BIN (combobox))));
+			const gchar *tmp_encoding2 = gtk_entry_get_text (GTK_ENTRY (gtk_bin_get_child (GTK_BIN (combobox))));
 			if (tmp_encoding2 != NULL)
 			{
 				tmp_encoding = g_strdup(tmp_encoding2);
@@ -1402,22 +1419,33 @@ void on_action_abrir_janela_localizar_activate(GtkAction *action, gpointer data)
 	gtk_widget_hide(dialog_localizar);
 }
 
-static off_t localiza_de_fato(off_t from, const uint8_t *key,
+static off_t localiza_de_fato(off_t from, off_t until, const uint8_t *key,
 		size_t key_length, const XChangeFile *xf)
 {
 	const size_t BUFFER_SIZE = 1024 * 1024;
 	off_t offset;
 	off_t achou = (off_t) -1;
-	uint8_t *buffer = malloc(BUFFER_SIZE);
+	uint8_t *buffer;
+
+	if (until && until < from)
+		return achou;
+
+	buffer = malloc(BUFFER_SIZE);
 	if (buffer == NULL)
 		return (off_t) -1;
-	size_t filesize = xchange_get_size(xf);
-	for (offset = from; offset + key_length < filesize; offset += BUFFER_SIZE - key_length)
+
+	if (until == 0)
+		until = xchange_get_size(xf);
+
+	for (offset = from; offset + key_length <= until; offset += BUFFER_SIZE - key_length)
 	{
 
 		int p;
 		size_t got = xchange_get_bytes(xf, offset, buffer, BUFFER_SIZE);
-		for (p = 0; p <= got-key_length; p++)
+		size_t internal_limit = got-key_length;
+		if (offset + internal_limit > until)
+			break;
+		for (p = 0; p <= internal_limit; p++)
 		{
 			if (memcmp(&buffer[p], key, key_length) == 0)
 			{
@@ -1430,10 +1458,15 @@ static off_t localiza_de_fato(off_t from, const uint8_t *key,
 	}
 
 	free(buffer);
+
+	if (achou > until)
+		return (off_t) -1;
+
 	return achou;
 }
 
-static off_t localiza_reverso_de_fato(off_t from, const uint8_t *key,
+// TODO: Implementar limite until!
+static off_t localiza_reverso_de_fato(off_t from, off_t until, const uint8_t *key,
 		size_t key_length, const XChangeFile *xf)
 {
 	const size_t BUFFER_SIZE = 1024 * 1024;
@@ -1477,7 +1510,7 @@ static off_t localiza_reverso_de_fato(off_t from, const uint8_t *key,
 		}
 		if (achou)
 			break; // Achou
-		if (offset == 0)
+		if (offset == 0 || offset == until)
 			break; // Chegou ao começo
 
 		if (offset >= BUFFER_SIZE-key_length)
@@ -1490,20 +1523,26 @@ static off_t localiza_reverso_de_fato(off_t from, const uint8_t *key,
 	return posicao_ocorrencia;
 }
 
-static void inicia_dados_localizar()
+static void inicia_dados_localizar(struct DadosLocalizar *localizar)
 {
-	texto_a_localizar = NULL;
-	localizando_bytes = FALSE;
-	localizando_proximo = TRUE;
+	localizar->texto_a_localizar = NULL;
+	localizar->localizando_bytes = FALSE;
+	localizar->localizando_proximo = TRUE;
+	localizar->inicio = 0;
+	localizar->fim = 0;
 }
 
 
-static void destroi_dados_localizar()
+static void destroi_dados_localizar(struct DadosLocalizar *localizar)
 {
-	g_free(texto_a_localizar);
-	inicia_dados_localizar();
+	g_free(localizar->texto_a_localizar);
+	inicia_dados_localizar(localizar);
+	// Liberar?
 }
 
+/*
+ * Converte o texto em bytes conforme codificação ativa.
+ */
 static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes, const char *contexto)
 {
 	int tamanho;
@@ -1631,41 +1670,71 @@ static uint8_t *recupera_bytes_de_texto_hexa(const char *texto, int *tamanho_byt
 	return bytes_chave;
 }
 
-static gboolean localiza_outro(off_t from, const XChangeFile *xf, gboolean back_direction)
+static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct DadosLocalizar *localizar)
 {
 	uint8_t *bytes_chave = NULL;
 	int tamanho_bytes = 0;
 
 	// Obtém sequência de bytes a buscar
-	if (!localizando_bytes)
+	if (!localizar->localizando_bytes)
 	{
 		// Localiza texto
-		bytes_chave = converte_pela_codificacao(texto_a_localizar, &tamanho_bytes, "Localização");
+		bytes_chave = converte_pela_codificacao(localizar->texto_a_localizar, &tamanho_bytes, "Localização");
 	}
 	else
 	{
 		// A string é uma sequência de bytes
-		bytes_chave = recupera_bytes_de_texto_hexa(texto_a_localizar, &tamanho_bytes, "Localização");
+		bytes_chave = recupera_bytes_de_texto_hexa(localizar->texto_a_localizar, &tamanho_bytes, "Localização");
 	}
 	if (bytes_chave == NULL)
 		return FALSE;
 
-
-	off_t (*funcao_localizar)(off_t from, const uint8_t *key,
-		size_t key_length, const XChangeFile *xf) = !back_direction ? localiza_de_fato : localiza_reverso_de_fato;
+//	off_t (*funcao_localizar)(off_t from, off_t until, const uint8_t *key,
+//		size_t key_length, const XChangeFile *xf) = localizar->localizando_proximo ? localiza_de_fato : localiza_reverso_de_fato;
 	// Busca enfim
-	off_t achou = funcao_localizar(from, bytes_chave, tamanho_bytes, xf);
+	off_t achou;// = funcao_localizar(from, 0, bytes_chave, tamanho_bytes, xf);
+	if (localizar->localizando_proximo)
+		achou = localiza_de_fato(from, localizar->fim, bytes_chave, tamanho_bytes, xf);
+	else
+		achou = localiza_reverso_de_fato(from, localizar->inicio, bytes_chave, tamanho_bytes, xf);
+	// Não encontrou: tentar de novo?
 	if (achou == (off_t) -1)
 	{
-		if (!back_direction && from != 0)
+		if (localizar->localizando_proximo)
 		{
-			if (mostraDialogoSimNao("A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?") == GTK_RESPONSE_YES)
-				achou = funcao_localizar(0, bytes_chave, tamanho_bytes, xf);
+			// Se deslocou-se alguma vez e não está mais no começo
+			if (localizar->inicio != from)
+			{
+				// Se o fim da busca é o fim do arquivo
+				if (localizar->fim == 0 || localizar->fim >= xchange_get_size(xf)-1)
+				{
+					if (mostraDialogoSimNao("A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?") == GTK_RESPONSE_YES)
+						achou = localiza_de_fato(0, 0, bytes_chave, tamanho_bytes, xf);
+				}
+				else
+				{
+					if (mostraDialogoSimNao("A busca alcançou o fim do intervalo e não localizou a sequência.\nDeseja buscar a partir do início do intervalo?") == GTK_RESPONSE_YES)
+						achou = localiza_de_fato(localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes, xf);
+				}
+			}
 		}
-		else if (back_direction && from < xchange_get_size(xf) -1)
+		else
 		{
-			if (mostraDialogoSimNao("A busca alcançou o começo do arquivo e não localizou a sequência.\nDeseja buscar a partir do fim do arquivo?") == GTK_RESPONSE_YES)
-				achou = funcao_localizar(xchange_get_size(xf) - 1, bytes_chave, tamanho_bytes, xf);
+			// Localizando anterior
+			// Se deslocou-se alguma vez e não está mais no fim
+			if (from < localizar->fim || (localizar->fim == 0 && from < xchange_get_size(xf) -1))
+			{
+				if (localizar->inicio == 0)
+				{
+					if (mostraDialogoSimNao("A busca alcançou o começo do arquivo e não localizou a sequência.\nDeseja buscar a partir do fim do arquivo?") == GTK_RESPONSE_YES)
+						achou = localiza_reverso_de_fato(xchange_get_size(xf) - 1, 0, bytes_chave, tamanho_bytes, xf);
+				}
+				else
+				{
+					if (mostraDialogoSimNao("A busca alcançou o começo do intervalo e não localizou a sequência.\nDeseja buscar a partir do fim do intervalo?") == GTK_RESPONSE_YES)
+						achou = localiza_reverso_de_fato(localizar->fim, localizar->inicio, bytes_chave, tamanho_bytes, xf);
+				}
+			}
 		}
 	}
 	free(bytes_chave);
@@ -1686,24 +1755,39 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, gboolean back_
 	return TRUE;
 }
 
-// TODO: Trocar para usar localizar_outro
 G_MODULE_EXPORT
 void on_action_localizar_activate(GtkAction *action, gpointer data)
 {
 	off_t pos_inicial = 0;
+	off_t pos_final = 0;
 	uint8_t *bytes_chave = NULL;
 	int tamanho_bytes = 0;
-	gboolean pesquisar_do_cursor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
-			radiobutton_pesquisar_do_cursor));
 
+	gboolean pesquisar_do_cursor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
+			radiobutton_localizar_do_cursor));
 	if (pesquisar_do_cursor)
-		pos_inicial = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv)) + 1;
+		pos_inicial = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
+
+	gboolean pesquisar_intervalo = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
+			radiobutton_localizar_no_intervalo));
+	if (pesquisar_intervalo)
+	{
+		pos_inicial = gtk_adjustment_get_value(adjustment_inicio_localizar);
+		pos_final = gtk_adjustment_get_value(adjustment_fim_localizar);
+	}
+
 	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
 
 	limpa_barra_de_estado("Localização");
 
 	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(
 			entry_valor_a_localizar));
+	if (texto == NULL)
+	{
+		pipoca_na_barra_de_estado("Localização", "Não conseguiu obter texto a localizar.");
+		return;
+	}
+
 	gint tamanho_texto = strlen(texto);
 	if (tamanho_texto == 0)
 	{
@@ -1725,64 +1809,52 @@ void on_action_localizar_activate(GtkAction *action, gpointer data)
 		bytes_chave = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, "Localização");
 	}
 	if (bytes_chave == NULL)
-		return;
-
-	// Libera dados em pesquisa
-	destroi_dados_localizar();
-	texto_a_localizar = g_strdup(texto);
-	localizando_bytes = localiza_bytes;
-	localizando_proximo = !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton_localizar_para_tras));
-	off_t (*funcao_localizar)(off_t from, const uint8_t *key,
-		size_t key_length, const XChangeFile *xf) = localizando_proximo ? localiza_de_fato : localiza_reverso_de_fato;
-
-	off_t achou = funcao_localizar(pos_inicial, bytes_chave, tamanho_bytes, xf);
-	if (achou == (off_t) -1 && pos_inicial != 0 && ! pesquisar_do_cursor)
 	{
-		if (mostraDialogoSimNao("A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?") == GTK_RESPONSE_YES)
-			funcao_localizar(0, bytes_chave, tamanho_bytes, xf);
+		pipoca_na_barra_de_estado("Localização", "Não conseguiu interpretar o texto a localizar.");
+		return;
 	}
 	free(bytes_chave);
-	if (achou == (off_t) -1)
-	{
-		gdk_window_beep(gtk_widget_get_window(main_window));
-		pipoca_na_barra_de_estado("Localização", "Não encontrado!");
-		return;
-	}
 
-	xchange_hex_view_goto(XCHANGE_HEX_VIEW(hexv), achou);
-	// Selecionar a busca
-	xchange_hex_view_select(XCHANGE_HEX_VIEW(hexv), achou, tamanho_bytes);
+	// Libera dados em pesquisa
+	destroi_dados_localizar(&dados_localizar);
+	dados_localizar.texto_a_localizar = g_strdup(texto);
+	dados_localizar.localizando_bytes = localiza_bytes;
+	dados_localizar.localizando_proximo = !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton_localizar_para_tras));
+	dados_localizar.inicio = pos_inicial;
+	dados_localizar.fim = pos_final;
+
+	localiza_outro(pos_inicial, xf, &dados_localizar);
 }
 
 G_MODULE_EXPORT
 void on_action_localizar_proximo_activate(GtkAction *action, gpointer data)
 {
 	// Se nada foi procurado ainda, abre o diálogo
-	if (texto_a_localizar == NULL)
+	if (dados_localizar.texto_a_localizar == NULL)
 	{
 		on_action_abrir_janela_localizar_activate(action, data);
 		return;
 	}
 
-	localizando_proximo = TRUE;
+	dados_localizar.localizando_proximo = TRUE;
 
 	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
 	off_t posicao_cursor = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
 
-	localiza_outro(posicao_cursor + 1, xf, FALSE);
+	localiza_outro(posicao_cursor + 1, xf, &dados_localizar);
 }
 
 G_MODULE_EXPORT
 void on_action_localizar_anterior_activate(GtkAction *action, gpointer data)
 {
 	// Se nada foi procurado ainda, abre o diálogo
-	if (texto_a_localizar == NULL)
+	if (dados_localizar.texto_a_localizar == NULL)
 	{
 		on_action_abrir_janela_localizar_activate(action, data);
 		return;
 	}
 
-	localizando_proximo = FALSE;
+	dados_localizar.localizando_proximo = FALSE;
 
 	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
 	off_t posicao_cursor = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
@@ -1797,7 +1869,13 @@ void on_action_localizar_anterior_activate(GtkAction *action, gpointer data)
 			posicao_cursor = xchange_get_size(xf);
 		else
 			posicao_cursor -= 1;
-	localiza_outro(posicao_cursor, xf, TRUE);
+	localiza_outro(posicao_cursor, xf, &dados_localizar);
+}
+
+G_MODULE_EXPORT
+void on_radiobutton_localizar_no_intervalo_toggled(GtkToggleButton *toggle, gpointer data)
+{
+	gtk_widget_set_sensitive(table_localizar_no_intervalo, gtk_toggle_button_get_active(toggle));
 }
 
 G_MODULE_EXPORT
