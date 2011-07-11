@@ -1904,6 +1904,15 @@ void on_entry_valor_a_localizar_changed(GtkEntry *entry, gpointer data)
 }
 
 G_MODULE_EXPORT
+void on_checkbutton_localizar_para_tras_toggled(GtkCheckButton *checkbutton, gpointer data)
+{
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
+		gtk_button_set_label(GTK_BUTTON(radiobutton_localizar_do_inicio), "Desde o fim");
+	else
+		gtk_button_set_label(GTK_BUTTON(radiobutton_localizar_do_inicio), "Desde o início");
+}
+
+G_MODULE_EXPORT
 void on_action_fechar_arquivo_activate(GtkAction *action, gpointer data)
 {
 	if (file_changes_saved)
