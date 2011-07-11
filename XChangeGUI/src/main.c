@@ -1670,8 +1670,6 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 	if (bytes_chave == NULL)
 		return FALSE;
 
-//	off_t (*funcao_localizar)(off_t from, off_t until, const uint8_t *key,
-//		size_t key_length, const XChangeFile *xf) = localizar->localizando_proximo ? localiza_de_fato : localiza_reverso_de_fato;
 	// Busca enfim
 	off_t achou;// = funcao_localizar(from, 0, bytes_chave, tamanho_bytes, xf);
 	if (localizar->localizando_proximo)
