@@ -1608,7 +1608,7 @@ static uint8_t *recupera_bytes_de_texto_hexa(const gchar *texto, int *tamanho_by
 	gboolean leu_primeiro_nibble = FALSE;
 	gboolean digito_desconhecido = FALSE;
 	const gchar *caractere = NULL;
-	for (caractere = texto; caractere != NULL; caractere = g_utf8_next_char(caractere))
+	for (caractere = texto; caractere != NULL && *caractere != 0; caractere = g_utf8_next_char(caractere))
 	{
 		gunichar carac = g_utf8_get_char(caractere);
 		if (g_unichar_isspace(carac))
