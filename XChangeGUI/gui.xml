@@ -164,32 +164,6 @@
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_undo_activate" swapped="no"/>
   </object>
-  <object class="GtkRadioAction" id="radioaction_visao_tabela2">
-    <property name="label">Visão Tabela 2</property>
-    <property name="short_label">Visão Tabela 2</property>
-    <property name="draw_as_radio">True</property>
-    <property name="value">2</property>
-    <property name="group">radioaction_visao_codificao_padronizada</property>
-  </object>
-  <object class="GtkToggleAction" id="toggleaction_modo_edicao">
-    <property name="label">INS</property>
-    <property name="short_label">INS</property>
-    <property name="tooltip">Inserir ou sobrescrever</property>
-    <signal name="toggled" handler="on_toggleaction_modo_edicao_toggled" swapped="no"/>
-  </object>
-  <object class="GtkToggleAction" id="toggleaction_show_offset_panel">
-    <property name="label">Ver offset atual</property>
-    <property name="short_label">Offset atual</property>
-    <property name="tooltip">Se mostra ou não o painel lateral de offset do arquivo</property>
-    <property name="active">True</property>
-    <signal name="toggled" handler="on_toggleaction_show_offset_panel_toggled" swapped="no"/>
-  </object>
-  <object class="GtkToggleAction" id="toggleaction_show_text">
-    <property name="label">Exibir texto equivalente</property>
-    <property name="short_label">Texto equivalente</property>
-    <property name="active">True</property>
-    <signal name="toggled" handler="on_toggleaction_show_text_toggled" swapped="no"/>
-  </object>
   <object class="GtkAdjustment" id="adjustment_cursor">
     <property name="upper">100</property>
     <property name="step_increment">1</property>
@@ -232,6 +206,32 @@
     <property name="draw_as_radio">True</property>
     <property name="value">1</property>
     <property name="group">radioaction_visao_codificao_padronizada</property>
+  </object>
+  <object class="GtkRadioAction" id="radioaction_visao_tabela2">
+    <property name="label">Visão Tabela 2</property>
+    <property name="short_label">Visão Tabela 2</property>
+    <property name="draw_as_radio">True</property>
+    <property name="value">2</property>
+    <property name="group">radioaction_visao_codificao_padronizada</property>
+  </object>
+  <object class="GtkToggleAction" id="toggleaction_modo_edicao">
+    <property name="label">INS</property>
+    <property name="short_label">INS</property>
+    <property name="tooltip">Inserir ou sobrescrever</property>
+    <signal name="toggled" handler="on_toggleaction_modo_edicao_toggled" swapped="no"/>
+  </object>
+  <object class="GtkToggleAction" id="toggleaction_show_offset_panel">
+    <property name="label">Ver offset atual</property>
+    <property name="short_label">Offset atual</property>
+    <property name="tooltip">Se mostra ou não o painel lateral de offset do arquivo</property>
+    <property name="active">True</property>
+    <signal name="toggled" handler="on_toggleaction_show_offset_panel_toggled" swapped="no"/>
+  </object>
+  <object class="GtkToggleAction" id="toggleaction_show_text">
+    <property name="label">Exibir texto equivalente</property>
+    <property name="short_label">Texto equivalente</property>
+    <property name="active">True</property>
+    <signal name="toggled" handler="on_toggleaction_show_text_toggled" swapped="no"/>
   </object>
   <object class="GtkDialog" id="dialog_codificacoes">
     <property name="can_focus">False</property>
@@ -785,6 +785,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                                     <property name="use_action_appearance">False</property>
                                     <property name="active">True</property>
                                     <property name="draw_indicator">True</property>
+                                    <signal name="toggled" handler="on_radiobutton_localizar_texto_toggled" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="expand">True</property>
@@ -801,6 +802,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                                     <property name="use_action_appearance">False</property>
                                     <property name="draw_indicator">True</property>
                                     <property name="group">radiobutton_localizar_texto</property>
+                                    <signal name="toggled" handler="on_radiobutton_localizar_bytes_toggled" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="expand">True</property>

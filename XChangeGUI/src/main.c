@@ -54,6 +54,7 @@ GtkAdjustment *adjustment_fim_localizar;
 GtkWidget *radiobutton_localizar_texto;
 GtkWidget *radiobutton_localizar_bytes;
 GtkWidget *checkbutton_localizar_para_tras;
+GtkAction *action_localizar;
 
 GtkAction *toggleaction_visao_tabela;
 GtkAction *radioaction_visao_codificao_padronizada;
@@ -235,6 +236,8 @@ static gboolean mostra_janela()
 			builder, "radiobutton_localizar_bytes"));
 	checkbutton_localizar_para_tras = GTK_WIDGET(gtk_builder_get_object(
 			builder, "checkbutton_localizar_para_tras"));
+	action_localizar = GTK_ACTION(gtk_builder_get_object(
+			builder, "action_localizar"));
 
 	toggleaction_visao_tabela = GTK_ACTION(gtk_builder_get_object(
 			builder, "toggleaction_visao_tabela"));
@@ -1857,49 +1860,129 @@ void on_radiobutton_localizar_no_intervalo_toggled(GtkToggleButton *toggle, gpoi
 	gtk_widget_set_sensitive(table_localizar_no_intervalo, gtk_toggle_button_get_active(toggle));
 }
 
+static gboolean verifica_validade_sequencia_bytes()
+{
+	uint8_t *bytes_chave;
+	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(
+			entry_valor_a_localizar));
+	if (texto == NULL || g_utf8_strlen(texto, -1)==0)
+	{
+		return FALSE;
+	}
+
+	bytes_chave = recupera_bytes_de_texto_hexa(texto, NULL, "Localização___teste");
+	if (bytes_chave == NULL)
+	{
+		limpa_barra_de_estado("Localização___teste");
+		return FALSE;
+	}
+	else
+	{
+		free(bytes_chave);
+		return TRUE;
+	}
+}
+
+static gboolean verifica_validade_sequencia_caracteres()
+{
+	uint8_t *bytes_chave;
+	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(
+			entry_valor_a_localizar));
+	if (texto == NULL || g_utf8_strlen(texto, -1)==0)
+	{
+		return FALSE;
+	}
+
+	bytes_chave = converte_pela_codificacao(texto, NULL, "Localização___teste");
+	if (bytes_chave == NULL)
+	{
+		limpa_barra_de_estado("Localização___teste");
+		return FALSE;
+	}
+	else
+	{
+		free(bytes_chave);
+		return TRUE;
+	}
+}
+
 G_MODULE_EXPORT
 void on_entry_valor_a_localizar_changed(GtkEntry *entry, gpointer data)
 {
-	gint tamanho_bytes;
-	uint8_t *bytes_chave;
 	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(
 			entry_valor_a_localizar));
 	if (texto == NULL || g_utf8_strlen(texto, -1)==0)
 	{
 		gtk_widget_set_sensitive(radiobutton_localizar_bytes, TRUE);
 		gtk_widget_set_sensitive(radiobutton_localizar_texto, TRUE);
+		gtk_action_set_sensitive(action_localizar, TRUE);
 		return;
 	}
 
+	gtk_action_set_sensitive(action_localizar, TRUE);
+
 	// Confere se pode ser uma sequência de bytes
-	bytes_chave = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, "Localização___teste");
-	if (bytes_chave == NULL)
+	if (verifica_validade_sequencia_bytes())
 	{
-		limpa_barra_de_estado("Localização___teste");
-		gtk_widget_set_sensitive(radiobutton_localizar_bytes, FALSE);
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiobutton_localizar_texto), TRUE);
+		gtk_widget_set_sensitive(radiobutton_localizar_bytes, TRUE);
 	}
 	else
 	{
-		free(bytes_chave);
-		gtk_widget_set_sensitive(radiobutton_localizar_bytes, TRUE);
+		gtk_widget_set_sensitive(radiobutton_localizar_bytes, FALSE);
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton_localizar_bytes)))
+			gtk_action_set_sensitive(action_localizar, FALSE);
 	}
 
 	// Confere se pode ser texto mesmo
-	bytes_chave = converte_pela_codificacao(texto, &tamanho_bytes, "Localização___teste");
-	if (bytes_chave == NULL)
+	if (verifica_validade_sequencia_caracteres())
 	{
-		limpa_barra_de_estado("Localização___teste");
-		gtk_widget_set_sensitive(radiobutton_localizar_texto, FALSE);
-		if (gtk_widget_get_sensitive(radiobutton_localizar_bytes))
-			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiobutton_localizar_bytes), TRUE);
-		else
-			; // TODO: Bloquear botão localizar
+		gtk_widget_set_sensitive(radiobutton_localizar_texto, TRUE);
 	}
 	else
 	{
-		free(bytes_chave);
-		gtk_widget_set_sensitive(radiobutton_localizar_texto, TRUE);
+		gtk_widget_set_sensitive(radiobutton_localizar_texto, FALSE);
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton_localizar_texto)))
+			gtk_action_set_sensitive(action_localizar, FALSE);
+	}
+}
+
+G_MODULE_EXPORT
+void on_radiobutton_localizar_texto_toggled(GtkRadioButton *radiobutton, gpointer data)
+{
+	if ( !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton)))
+		return;
+
+	gtk_action_set_sensitive(action_localizar, TRUE);
+
+	if (verifica_validade_sequencia_caracteres())
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(radiobutton), TRUE);
+	}
+	else
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(radiobutton), FALSE);
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton)))
+			gtk_action_set_sensitive(action_localizar, FALSE);
+	}
+}
+
+G_MODULE_EXPORT
+void on_radiobutton_localizar_bytes_toggled(GtkRadioButton *radiobutton, gpointer data)
+{
+	if ( !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton)))
+		return;
+
+	gtk_action_set_sensitive(action_localizar, TRUE);
+
+	if (verifica_validade_sequencia_bytes())
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(radiobutton), TRUE);
+	}
+	else
+	{
+		gtk_widget_set_sensitive(GTK_WIDGET(radiobutton), FALSE);
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton)))
+			gtk_action_set_sensitive(action_localizar, FALSE);
 	}
 }
 
