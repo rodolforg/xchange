@@ -1879,6 +1879,52 @@ void on_radiobutton_localizar_no_intervalo_toggled(GtkToggleButton *toggle, gpoi
 }
 
 G_MODULE_EXPORT
+void on_entry_valor_a_localizar_changed(GtkEntry *entry, gpointer data)
+{
+	gint tamanho_bytes;
+	uint8_t *bytes_chave;
+	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(
+			entry_valor_a_localizar));
+	if (texto == NULL || g_utf8_strlen(texto, -1)==0)
+	{
+		gtk_widget_set_sensitive(radiobutton_localizar_bytes, TRUE);
+		gtk_widget_set_sensitive(radiobutton_localizar_texto, TRUE);
+		return;
+	}
+
+	// Confere se pode ser uma sequência de bytes
+	bytes_chave = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, "Localização___teste");
+	if (bytes_chave == NULL)
+	{
+		limpa_barra_de_estado("Localização___teste");
+		gtk_widget_set_sensitive(radiobutton_localizar_bytes, FALSE);
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiobutton_localizar_texto), TRUE);
+	}
+	else
+	{
+		free(bytes_chave);
+		gtk_widget_set_sensitive(radiobutton_localizar_bytes, TRUE);
+	}
+
+	// Confere se pode ser texto mesmo
+	bytes_chave = converte_pela_codificacao(texto, &tamanho_bytes, "Localização___teste");
+	if (bytes_chave == NULL)
+	{
+		limpa_barra_de_estado("Localização___teste");
+		gtk_widget_set_sensitive(radiobutton_localizar_texto, FALSE);
+		if (gtk_widget_get_sensitive(radiobutton_localizar_bytes))
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radiobutton_localizar_bytes), TRUE);
+		else
+			; // TODO: Bloquear botão localizar
+	}
+	else
+	{
+		free(bytes_chave);
+		gtk_widget_set_sensitive(radiobutton_localizar_texto, TRUE);
+	}
+}
+
+G_MODULE_EXPORT
 void on_action_fechar_arquivo_activate(GtkAction *action, gpointer data)
 {
 	if (file_changes_saved)
