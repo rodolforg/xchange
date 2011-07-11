@@ -101,7 +101,7 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data);
 
 static void inicia_dados_localizar(struct DadosLocalizar *);
 static void destroi_dados_localizar(struct DadosLocalizar *);
-static uint8_t *recupera_bytes_de_texto_hexa(const char *texto, int *tamanho_bytes, const char *contexto);
+static uint8_t *recupera_bytes_de_texto_hexa(const gchar *texto, int *tamanho_bytes, const gchar *contexto);
 static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes, const char *contexto);
 
 
@@ -1580,12 +1580,15 @@ static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes,
 	return bytes_chave;
 }
 
-static uint8_t *recupera_bytes_de_texto_hexa(const char *texto, int *tamanho_bytes, const char *contexto)
+static uint8_t *recupera_bytes_de_texto_hexa(const gchar *texto, int *tamanho_bytes, const gchar *contexto)
 {
 	if (texto == NULL)
 		return NULL;
 
-	int tamanho_texto = strlen(texto);
+	if (!g_utf8_validate(texto, -1, NULL))
+		return NULL;
+
+	int tamanho_texto = g_utf8_strlen(texto, -1);
 	if (tamanho_texto == 0)
 		return NULL;
 
@@ -1598,72 +1601,50 @@ static uint8_t *recupera_bytes_de_texto_hexa(const char *texto, int *tamanho_byt
 		return NULL;
 	}
 
-	int n;
 	int pos = 0;
 	gboolean leu_primeiro_nibble = FALSE;
-	for (n = 0; n < tamanho_texto; n++)
+	gboolean digito_desconhecido = FALSE;
+	const gchar *caractere = NULL;
+	for (caractere = texto; caractere != NULL; caractere = g_utf8_next_char(caractere))
 	{
-		if (texto[n] == ' ' || texto[n] == '\t' || texto[n] == '\n' || texto[n] == '\r')
+		gunichar carac = g_utf8_get_char(caractere);
+		if (g_unichar_isspace(carac))
 		{
 			if (leu_primeiro_nibble)
-			{
-				pos ++;
-				leu_primeiro_nibble = FALSE;
-			}
-			continue;
+				break;
+			else
+				continue;
 		}
-		if (texto[n]>='0' && texto[n]<='9')
+		else if (g_unichar_isxdigit(carac))
 		{
+			gint digito = g_unichar_xdigit_value(carac);
 			if (!leu_primeiro_nibble)
 			{
-				bytes_chave[pos] = (texto[n]-'0');
+				bytes_chave[pos] = digito;
 			}
 			else
 			{
 				bytes_chave[pos] <<= 4;
-				bytes_chave[pos] |= (texto[n]-'0');
-				pos++;
-			}
-			leu_primeiro_nibble = !leu_primeiro_nibble;
-			continue;
-		}
-		if (texto[n]>='a' && texto[n]<='f')
-		{
-			if (!leu_primeiro_nibble)
-			{
-				bytes_chave[pos] = (texto[n]-'a' + 10);
-			}
-			else
-			{
-				bytes_chave[pos] <<= 4;
-				bytes_chave[pos] |= (texto[n]-'a' + 10);
-				pos++;
-			}
-			leu_primeiro_nibble = !leu_primeiro_nibble;
-			continue;
-		}
-		if (texto[n]>='A' && texto[n]<='F')
-		{
-			if (!leu_primeiro_nibble)
-			{
-				bytes_chave[pos] = (texto[n]-'A' + 10);
-			}
-			else
-			{
-				bytes_chave[pos] <<= 4;
-				bytes_chave[pos] |= (texto[n]-'A' + 10);
+				bytes_chave[pos] |= digito;
 				pos++;
 			}
 			leu_primeiro_nibble = !leu_primeiro_nibble;
 			continue;
 		}
 
+		digito_desconhecido = TRUE;
+		break;
+	}
+
+	if (leu_primeiro_nibble || digito_desconhecido)
+	{
 		g_free(bytes_chave);
 		gdk_window_beep(gtk_widget_get_window(main_window));
 		if (contexto != NULL)
 			pipoca_na_barra_de_estado(contexto, "Não conseguiu converter o texto em bytes!");
 		return NULL;
 	}
+
 	if (tamanho_bytes != NULL)
 		*tamanho_bytes = pos;
 
