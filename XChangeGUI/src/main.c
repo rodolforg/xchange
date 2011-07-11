@@ -1562,14 +1562,14 @@ static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes,
 	if (tamanho <= 0)
 	{
 		gdk_window_beep(gtk_widget_get_window(main_window));
-		pipoca_na_barra_de_estado("Localização", "Não conseguiu converter o texto em bytes através da tabela!");
+		pipoca_na_barra_de_estado(contexto, "Não conseguiu converter o texto em bytes através da tabela!");
 		return NULL;
 	}
 	bytes_chave = malloc(tamanho);
 	if (bytes_chave == NULL)
 	{
 		gdk_window_beep(gtk_widget_get_window(main_window));
-		pipoca_na_barra_de_estado("Localização", "Problema na alocação de memória!");
+		pipoca_na_barra_de_estado(contexto, "Problema na alocação de memória!");
 		return NULL;
 	}
 	xchange_table_scan_stringUTF8(xt, texto, tamanho_texto, bytes_chave);
