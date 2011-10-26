@@ -191,7 +191,10 @@ static gboolean mostra_janela()
 		return FALSE;
 
 	if (!carrega_arquivo_interface(builder, "gui.xml"))
+	{
 		g_object_unref(builder);
+		return FALSE;
+	}
 
 	gtk_builder_connect_signals(builder, NULL);
 
