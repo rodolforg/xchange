@@ -157,7 +157,6 @@ struct XChangeFile
 	FileAction * history_redo;
 };
 
-// TODO: Inserir modo de abertura!
 XChangeFile * xchange_open(const char *path, const char *mode)
 {
 	FILE *f = NULL;
@@ -166,21 +165,6 @@ XChangeFile * xchange_open(const char *path, const char *mode)
 		f = fopen(path, mode);
 		if (f == NULL)
 			return NULL;
-		/*
-		// Test whether file exists or can be created
-		f = fopen(path, "rb");
-		if (f == NULL)
-		{
-			if (path != NULL)
-			{
-				f = fopen(path, "wb");
-				if (f == NULL)
-				{
-					return NULL;
-				}
-			}
-		}
-		*/
 	}
 
 	// Try to create hexchange handler
@@ -743,6 +727,8 @@ static int removeFileFileSectionBeginning(FileSection *s, off_t new_start)
 
 static int removeMemoryFileSectionBeginning(FileSection *s, off_t new_start)
 {
+	unsigned char *tmp;
+
 	if (s == NULL)
 		return 0;
 	if (s->type != XCF_SECTION_MEMORY)
@@ -755,7 +741,10 @@ static int removeMemoryFileSectionBeginning(FileSection *s, off_t new_start)
 
 	size_t removed_size = new_start - s->offset;
 	dirmemcpy(s->data.data, s->data.data + removed_size, s->size - removed_size);
-	s->data.data = realloc(s->data.data, s->size-removed_size);//TODO: care to free if realloc fails
+	tmp = realloc(s->data.data, s->size-removed_size);
+	if (tmp == NULL)
+		return 0;//TODO: care to return original values if realloc fails
+	tmp = s->data.data;
 	s->size -= removed_size;
 	s->offset = new_start;
 	return 1;
@@ -960,14 +949,8 @@ static int xchange_do_insert_bytes(XChangeFile * xfile, off_t offset, const uint
 		section->data.data = new_data;
 		// Shift left the data
 		// memcpy not safe: dst and src overlaps each other
-		//memcpy(section->data.data + (offset - section->offset) + size, section->data.data + (offset - section->offset), section->size - (offset - section->offset));
-		revmemcpy(section->data.data + (offset - section->offset) + size, section->data.data + (offset - section->offset), section->size - (offset - section->offset));//FIXME
-/*		int n;
-		for (n = section->size - size - 1; n >= offset - section->offset; n--)
-		{
-			section->data.data[n+size] = section->data.data[n];
-		}
-*/		// Insert data
+		revmemcpy(section->data.data + (offset - section->offset) + size, section->data.data + (offset - section->offset), section->size - (offset - section->offset));
+		// Insert data
 		memcpy(section->data.data + (offset - section->offset), bytes, size);
 		section->size += size;
 		// Since what section it should fix offsets
@@ -1011,7 +994,7 @@ int xchange_insert_bytes(XChangeFile * xfile, off_t offset, const uint8_t *bytes
 	return xchange_do_insert_bytes(xfile, offset, bytes, size, xfile->use_history);
 }
 
-static int xchange_do_delete_bytes(XChangeFile * xfile, const off_t offset, size_t size, const int add_history)
+static int xchange_do_delete_bytes(XChangeFile * xfile, const off_t offset, size_t size)
 {
 	if (xfile == NULL || size == 0)
 		return 0;
@@ -1140,12 +1123,6 @@ static int xchange_do_delete_bytes(XChangeFile * xfile, const off_t offset, size
 	// Update file size
 	xfile->size -= size;
 
-	// TODO add action to undo list
-	if (add_history)
-	{
-
-	}
-
 	return 1;
 }
 
@@ -1153,38 +1130,47 @@ int xchange_delete_bytes(XChangeFile * xfile, off_t offset, size_t size)
 {
 	if (xfile == NULL || size == 0)
 		return 0;
+
 	uint8_t * dados = NULL;
 	size_t diff = xfile->size;
+	FileAction *a = NULL;
+
 	if (xfile->use_history)
 	{
 		dados = malloc(size);
+		if (dados == NULL)
+			return 0;
 		xchange_get_bytes(xfile, offset, dados, size);
+		a = malloc(sizeof(FileAction));
+		if (a == NULL)
+		{
+			free(dados);
+			return 0;
+		}
 	}
-	int resp = xchange_do_delete_bytes(xfile, offset, size, 0); // FIXME: Tirei o xfile->use_history
+	int resp = xchange_do_delete_bytes(xfile, offset, size);
 	if (resp == 0)
 	{
 		if (xfile->use_history)
+		{
 			free(dados);
+			free(a);
+		}
 		return 0;
 	}
 	if (xfile->use_history)
 	{
 		diff -= xfile->size;
-		FileAction *a = malloc(sizeof(FileAction));
-		// TODO: a == NULL?
-		if (a != NULL)
-		{
-			a->data = dados;
-			a->offset = offset;
-			a->size = diff;
-			a->type = XFILE_DELETE;
-			xchange_insert_undo(xfile, a);
-		}
+		a->data = dados;
+		a->offset = offset;
+		a->size = diff;
+		a->type = XFILE_DELETE;
+		xchange_insert_undo(xfile, a);
 	}
 	return 1;
 }
 
-static int xchange_do_replace_bytes(XChangeFile * xfile, const off_t offset, const uint8_t *bytes, size_t size, int add_history)
+static int xchange_do_replace_bytes(XChangeFile * xfile, const off_t offset, const uint8_t *bytes, size_t size)
 {
 	if (xfile == NULL || bytes == NULL || offset >= xfile->size || size == 0)
 		return 0;
@@ -1405,12 +1391,15 @@ int xchange_replace_bytes(XChangeFile * xfile, off_t offset, const uint8_t *byte
 	if (xfile == NULL)
 		return 0;
 
+	FileAction *a = NULL;
 	uint8_t *dados = NULL;
 	int tam = size;
 
 	if (xfile->use_history)
 	{
 		dados = malloc(size);
+		if (dados == NULL)
+			return 0;
 		tam = xchange_get_bytes(xfile, offset, dados, size);
 		if (tam != size)
 		{
@@ -1418,33 +1407,38 @@ int xchange_replace_bytes(XChangeFile * xfile, off_t offset, const uint8_t *byte
 			if (d != NULL)
 				dados = d;
 			else if (tam == 0)
+			{
+				free(dados);
 				dados = NULL;
+			}
+		}
+		a = malloc(sizeof(FileAction));
+		if (a == NULL)
+		{
+			free(dados);
+			return 0;
 		}
 	}
 
-	int resp = xchange_do_replace_bytes(xfile, offset, bytes, size, xfile->use_history);
+	int resp = xchange_do_replace_bytes(xfile, offset, bytes, size);
 
 	if (resp == 0)
 	{
 		if (xfile->use_history)
 		{
 			free(dados);
+			free(a);
 		}
 		return 0;
 	}
 
 	if (xfile->use_history)
 	{
-		FileAction *a = malloc(sizeof(FileAction));
-		// TODO: a == NULL?
-		if (a != NULL)
-		{
-			a->data = dados;
-			a->offset = offset;
-			a->size = tam; // FIXME: size? ou tam? Replace pode acrescentar bytes...
-			a->type = XFILE_REPLACE;
-			xchange_insert_undo(xfile, a);
-		}
+		a->data = dados;
+		a->offset = offset;
+		a->size = tam; // FIXME: size? ou tam? Replace pode acrescentar bytes...
+		a->type = XFILE_REPLACE;
+		xchange_insert_undo(xfile, a);
 	}
 	return 1;
 }
@@ -1539,11 +1533,12 @@ int xchange_undo(XChangeFile * xfile)
 			if (a->data == NULL)
 			{
 				uint8_t *data = malloc(a->size);
-				// TODO: E se data == NULL?
+				if (data == NULL)
+					return 0;
 				xchange_get_bytes(xfile, a->offset, data, a->size);
 				a->data = data;
 			}
-			if (!xchange_do_delete_bytes(xfile, a->offset, a->size, 0))
+			if (!xchange_do_delete_bytes(xfile, a->offset, a->size))
 				return 0;
 			break;
 		}
@@ -1551,10 +1546,11 @@ int xchange_undo(XChangeFile * xfile)
 		{
 
 			uint8_t *data = malloc(a->size);
-			// TODO: E se data == NULL?
+			if (data == NULL)
+				return 0;
 			xchange_get_bytes(xfile, a->offset, data, a->size);
 
-			if (!xchange_do_replace_bytes(xfile, a->offset, a->data, a->size, 0))
+			if (!xchange_do_replace_bytes(xfile, a->offset, a->data, a->size))
 			{
 				free(data);
 				return 0;
@@ -1594,17 +1590,18 @@ int xchange_redo(XChangeFile * xfile)
 		}
 		case XFILE_DELETE:
 		{
-			if (!xchange_do_delete_bytes(xfile, a->offset, a->size, 0))
+			if (!xchange_do_delete_bytes(xfile, a->offset, a->size))
 				return 0;
 			break;
 		}
 		case XFILE_REPLACE:
 		{
 			uint8_t *data = malloc(a->size);
-			// TODO: E se data == NULL?
+			if (data == NULL)
+				return 0;
 			xchange_get_bytes(xfile, a->offset, data, a->size);
 
-			if (!xchange_do_replace_bytes(xfile, a->offset, a->data, a->size, 0))
+			if (!xchange_do_replace_bytes(xfile, a->offset, a->data, a->size))
 			{
 				free(data);
 				return 0;
