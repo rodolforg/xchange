@@ -505,7 +505,51 @@ int xchange_save_as(XChangeFile * xfile, const char *path)
 	return sucesso;
 }
 
+// TODO: Se from e until estiverem na mesma seção e ela for na memória, não precisa duplicar na memória...
+off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uint8_t *key, size_t key_length)
+{
+	const size_t BUFFER_SIZE = 1024 * 1024;
+	off_t offset;
+	off_t achou = (off_t) -1;
+	uint8_t *buffer;
 
+	if (until && until < from)
+		return achou;
+
+	buffer = malloc(BUFFER_SIZE);
+	if (buffer == NULL)
+		return (off_t) -1;
+
+	if (until == 0)
+		until = xchange_get_size(xfile);
+
+	for (offset = from; offset + key_length <= until; offset += BUFFER_SIZE - key_length)
+	{
+
+		int p;
+		size_t got = xchange_get_bytes(xfile, offset, buffer, BUFFER_SIZE);
+		size_t internal_limit = got-key_length;
+		if (offset + internal_limit > until)
+			break;
+		for (p = 0; p <= internal_limit; p++)
+		{
+			if (memcmp(&buffer[p], key, key_length) == 0)
+			{
+				achou = offset + p;
+				break;
+			}
+		}
+		if (achou != (off_t) -1)
+			break;
+	}
+
+	free(buffer);
+
+	if (achou > until)
+		return (off_t) -1;
+
+	return achou;
+}
 
 static FileSection * search_section(const XChangeFile * xfile, off_t offset)
 {
