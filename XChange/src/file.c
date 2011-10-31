@@ -248,7 +248,7 @@ XChangeFile * xchange_open(const char *path, const char *mode)
 	}
 	else if (xf->size <= MAXFULLFILEBUFFERSIZE)
 	{
-		// File can fits to memory
+		// File fits into memory
 
 		if (fseek(f, 0, SEEK_SET) != 0)
 		{
@@ -371,14 +371,12 @@ static int xchange_save_bytes(const XChangeFile * xfile, FILE *f)
 {
 	FileSection * section;
 	off_t output_pos;
-	int errors;
 
 	if (xfile == NULL || f == NULL)
 		return 0;
 
 	section = xfile->sections;
 	output_pos = 0;
-	errors = 0;
 
 	if (section == NULL)
 	{
@@ -1771,7 +1769,7 @@ uint16_t xchange_readUShort(XChangeFile * xfile)
 		return EOF;
 
 	uint16_t s;
-	if (!xchange_get_bytes(xfile, xfile->next_read, &s, 2))
+	if (!xchange_get_bytes(xfile, xfile->next_read, (uint8_t*)&s, 2))
 		return EOF;
 
 	xfile->next_read+=2;
@@ -1783,7 +1781,7 @@ uint32_t xchange_readUInt(XChangeFile * xfile)
 		return EOF;
 
 	uint32_t i;
-	if (!xchange_get_bytes(xfile, xfile->next_read, &i, 4))
+	if (!xchange_get_bytes(xfile, xfile->next_read, (uint8_t*)&i, 4))
 		return EOF;
 
 	xfile->next_read+=4;
@@ -1795,7 +1793,7 @@ uint64_t xchange_readULong(XChangeFile * xfile)
 		return EOF;
 
 	uint64_t l;
-	if (!xchange_get_bytes(xfile, xfile->next_read, &l, 8))
+	if (!xchange_get_bytes(xfile, xfile->next_read, (uint8_t*)&l, 8))
 		return EOF;
 
 	xfile->next_read+=8;
