@@ -1428,47 +1428,7 @@ void on_action_abrir_janela_localizar_activate(GtkAction *action, gpointer data)
 static off_t localiza_de_fato(off_t from, off_t until, const uint8_t *key,
 		size_t key_length, const XChangeFile *xf)
 {
-	const size_t BUFFER_SIZE = 1024 * 1024;
-	off_t offset;
-	off_t achou = (off_t) -1;
-	uint8_t *buffer;
-
-	if (until && until < from)
-		return achou;
-
-	buffer = malloc(BUFFER_SIZE);
-	if (buffer == NULL)
-		return (off_t) -1;
-
-	if (until == 0)
-		until = xchange_get_size(xf);
-
-	for (offset = from; offset + key_length <= until; offset += BUFFER_SIZE - key_length)
-	{
-
-		int p;
-		size_t got = xchange_get_bytes(xf, offset, buffer, BUFFER_SIZE);
-		size_t internal_limit = got-key_length;
-		if (offset + internal_limit > until)
-			break;
-		for (p = 0; p <= internal_limit; p++)
-		{
-			if (memcmp(&buffer[p], key, key_length) == 0)
-			{
-				achou = offset + p;
-				break;
-			}
-		}
-		if (achou != (off_t) -1)
-			break;
-	}
-
-	free(buffer);
-
-	if (achou > until)
-		return (off_t) -1;
-
-	return achou;
+	return xchange_find(xf, from, until, key, key_length);
 }
 
 // TODO: Implementar limite until!
