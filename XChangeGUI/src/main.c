@@ -1431,64 +1431,6 @@ void on_action_abrir_janela_localizar_activate(GtkAction *action, gpointer data)
 	gtk_widget_hide(dialog_localizar);
 }
 
-// TODO: Implementar limite until!
-static off_t localiza_reverso_de_fato(off_t from, off_t until, const uint8_t *key,
-		size_t key_length, const XChangeFile *xf)
-{
-	const size_t BUFFER_SIZE = 1024 * 1024;
-	off_t offset;
-	off_t posicao_ocorrencia = (off_t) -1;
-	gboolean achou = FALSE;
-	uint8_t *buffer;
-
-	size_t tamanho_arquivo = xchange_get_size(xf);
-	if (tamanho_arquivo == (size_t)-1)
-		return (off_t) -1;
-	if (tamanho_arquivo == 0)
-		return (off_t) -1;
-
-	if (from >= tamanho_arquivo)
-		from = tamanho_arquivo;
-
-	if (from >= BUFFER_SIZE)
-		offset = from - BUFFER_SIZE;
-	else
-		offset = 0;
-
-	buffer = malloc(BUFFER_SIZE);
-	if (buffer == NULL)
-		return (off_t) -1;
-
-	while (1)
-	{
-		int p;
-		size_t got = xchange_get_bytes(xf, offset, buffer, BUFFER_SIZE);
-		if (offset + got > from)
-			got = from - offset;
-		for (p = got - key_length; p >= 0; p--)
-		{
-			if (memcmp(&buffer[p], key, key_length) == 0)
-			{
-				achou = TRUE;
-				posicao_ocorrencia = offset + p;
-				break;
-			}
-		}
-		if (achou)
-			break; // Achou
-		if (offset == 0 || offset == until)
-			break; // Chegou ao começo
-
-		if (offset >= BUFFER_SIZE-key_length)
-			offset -= BUFFER_SIZE-key_length;
-		else
-			offset = 0;
-	}
-
-	free(buffer);
-	return posicao_ocorrencia;
-}
-
 static void inicia_dados_localizar(struct DadosLocalizar *localizar)
 {
 	localizar->texto_a_localizar = NULL;
@@ -1641,7 +1583,7 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 	if (localizar->localizando_proximo)
 		achou = xchange_find(xf, from, localizar->fim, bytes_chave, tamanho_bytes);
 	else
-		achou = localiza_reverso_de_fato(from, localizar->inicio, bytes_chave, tamanho_bytes, xf);
+		achou = xchange_find_backwards(xf, localizar->inicio, from, bytes_chave, tamanho_bytes);
 	// Não encontrou: tentar de novo?
 	if (achou == (off_t) -1)
 	{
@@ -1669,15 +1611,15 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 			// Se deslocou-se alguma vez e não está mais no fim
 			if (from < localizar->fim || (localizar->fim == 0 && from < xchange_get_size(xf) -1))
 			{
-				if (localizar->inicio == 0)
+				if (localizar->inicio == 0 && (localizar->fim == 0 || localizar->fim == xchange_get_size(xf) -1))
 				{
 					if (mostraDialogoSimNao("A busca alcançou o começo do arquivo e não localizou a sequência.\nDeseja buscar a partir do fim do arquivo?") == GTK_RESPONSE_YES)
-						achou = localiza_reverso_de_fato(xchange_get_size(xf) - 1, 0, bytes_chave, tamanho_bytes, xf);
+						achou = xchange_find_backwards(xf, 0, xchange_get_size(xf) - 1, bytes_chave, tamanho_bytes);
 				}
 				else
 				{
 					if (mostraDialogoSimNao("A busca alcançou o começo do intervalo e não localizou a sequência.\nDeseja buscar a partir do fim do intervalo?") == GTK_RESPONSE_YES)
-						achou = localiza_reverso_de_fato(localizar->fim, localizar->inicio, bytes_chave, tamanho_bytes, xf);
+						achou = xchange_find_backwards(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
 				}
 			}
 		}
@@ -1776,7 +1718,7 @@ void on_action_localizar_activate(GtkAction *action, gpointer data)
 	dados_localizar.inicio = pos_inicial;
 	dados_localizar.fim = pos_final;
 
-	localiza_outro(pos_inicial, xf, &dados_localizar);
+	localiza_outro(dados_localizar.localizando_proximo ? pos_inicial : pos_final, xf, &dados_localizar);
 }
 
 G_MODULE_EXPORT
@@ -1815,7 +1757,7 @@ void on_action_localizar_anterior_activate(GtkAction *action, gpointer data)
 	if (xchange_hex_view_get_selection_bounds(XCHANGE_HEX_VIEW(hexv), &inicio_selecao, &fim_selecao))
 	{
 		if (posicao_cursor == inicio_selecao)
-			posicao_cursor = fim_selecao;
+			posicao_cursor = fim_selecao-1;
 	}
 	else
 		if (posicao_cursor == 0)
