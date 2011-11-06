@@ -740,6 +740,12 @@ G_MODULE_EXPORT void on_action_salvar_como_activate(GtkAction *action,
 		changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
 		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
+		gchar *nome = g_path_get_basename(nome_arquivo);
+		gchar *new_title = g_strdup_printf("heXchange - %s (%s)", nome, ultimo_diretorio);
+		g_free(nome);
+		gtk_window_set_title(GTK_WINDOW(main_window), new_title);
+		g_free(new_title);
+
 		// Acrescenta à lista de recentes
 		acrescenta_aos_recentes(nome_arquivo);
 		g_free(nome_arquivo);
