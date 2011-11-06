@@ -504,8 +504,8 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 	if (buffer == NULL)
 		return (off_t) -1;
 
-	if (until == 0 || until > xchange_get_size(xfile))
-		until = xchange_get_size(xfile);
+	if (until == 0 || until >= xchange_get_size(xfile)-1)
+		until = xchange_get_size(xfile)-1;
 
 	for (offset = from; offset + key_length -1 <= until; offset += BUFFER_SIZE - key_length + 1)
 	{
@@ -513,7 +513,7 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 		int p;
 		size_t got;
 		got = xchange_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
-		if (got == 0)
+		if (got < key_length)
 			break;
 		size_t internal_limit = got-key_length;
 
@@ -550,8 +550,8 @@ off_t xchange_find_backwards(const XChangeFile * xfile, off_t from, off_t until,
 	if (buffer == NULL)
 		return (off_t) -1;
 
-	if (until == 0 || until > xchange_get_size(xfile))
-		until = xchange_get_size(xfile);
+	if (until == 0 || until >= xchange_get_size(xfile))
+		until = xchange_get_size(xfile) -1;
 
 	offset = until - from < BUFFER_SIZE ? from : until - BUFFER_SIZE;
 
@@ -560,7 +560,7 @@ off_t xchange_find_backwards(const XChangeFile * xfile, off_t from, off_t until,
 		int p;
 		size_t got;
 		got = xchange_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
-		if (got == 0)
+		if (got < key_length)
 			break;
 		size_t internal_limit = got-key_length;
 
