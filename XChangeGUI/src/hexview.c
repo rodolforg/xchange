@@ -2566,7 +2566,7 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 			block_propagation = TRUE;
 		}
 	}
-	else if (event->keyval == GDK_KEY_Insert && event->state == 0)
+	else if (event->keyval == GDK_KEY_Insert && (event->state & ~GDK_LOCK_MASK)== 0)
 	{
 		if (hexv->editable)
 		{
