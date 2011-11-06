@@ -51,6 +51,8 @@ GtkWidget *radiobutton_localizar_no_intervalo;
 GtkWidget *table_localizar_no_intervalo;
 GtkAdjustment *adjustment_inicio_localizar;
 GtkAdjustment *adjustment_fim_localizar;
+GtkWidget *spinbutton_inicio_localizar;
+GtkWidget *spinbutton_fim_localizar;
 GtkWidget *radiobutton_localizar_texto;
 GtkWidget *radiobutton_localizar_bytes;
 GtkWidget *checkbutton_localizar_para_tras;
@@ -233,6 +235,10 @@ static gboolean mostra_janela()
 			builder, "adjustment_inicio_localizar"));
 	adjustment_fim_localizar = GTK_ADJUSTMENT(gtk_builder_get_object(
 			builder, "adjustment_fim_localizar"));
+	spinbutton_inicio_localizar = GTK_WIDGET(gtk_builder_get_object(
+			builder, "spinbutton_inicio_localizar"));
+	spinbutton_fim_localizar = GTK_WIDGET(gtk_builder_get_object(
+			builder, "spinbutton_fim_localizar"));
 	radiobutton_localizar_texto = GTK_WIDGET(gtk_builder_get_object(
 			builder, "radiobutton_localizar_texto"));
 	radiobutton_localizar_bytes = GTK_WIDGET(gtk_builder_get_object(
@@ -1717,8 +1723,16 @@ void on_action_localizar_activate(GtkAction *action, gpointer data)
 			radiobutton_localizar_no_intervalo));
 	if (pesquisar_intervalo)
 	{
-		pos_inicial = gtk_adjustment_get_value(adjustment_inicio_localizar);
-		pos_final = gtk_adjustment_get_value(adjustment_fim_localizar);
+		gchar *texto;
+
+		texto = gtk_editable_get_chars(GTK_EDITABLE(spinbutton_inicio_localizar), 0, -1);
+		pos_inicial = converte_texto_em_posicao(texto);
+		g_free(texto);
+
+		texto = gtk_editable_get_chars(GTK_EDITABLE(spinbutton_fim_localizar), 0, -1);
+		pos_final = converte_texto_em_posicao(texto);
+		g_free(texto);
+
 	}
 
 	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
