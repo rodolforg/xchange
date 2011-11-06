@@ -1431,12 +1431,6 @@ void on_action_abrir_janela_localizar_activate(GtkAction *action, gpointer data)
 	gtk_widget_hide(dialog_localizar);
 }
 
-static off_t localiza_de_fato(off_t from, off_t until, const uint8_t *key,
-		size_t key_length, const XChangeFile *xf)
-{
-	return xchange_find(xf, from, until, key, key_length);
-}
-
 // TODO: Implementar limite until!
 static off_t localiza_reverso_de_fato(off_t from, off_t until, const uint8_t *key,
 		size_t key_length, const XChangeFile *xf)
@@ -1645,7 +1639,7 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 	// Busca enfim
 	off_t achou;// = funcao_localizar(from, 0, bytes_chave, tamanho_bytes, xf);
 	if (localizar->localizando_proximo)
-		achou = localiza_de_fato(from, localizar->fim, bytes_chave, tamanho_bytes, xf);
+		achou = xchange_find(xf, from, localizar->fim, bytes_chave, tamanho_bytes);
 	else
 		achou = localiza_reverso_de_fato(from, localizar->inicio, bytes_chave, tamanho_bytes, xf);
 	// Não encontrou: tentar de novo?
@@ -1660,12 +1654,12 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 				if (localizar->fim == 0 || localizar->fim >= xchange_get_size(xf)-1)
 				{
 					if (mostraDialogoSimNao("A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?") == GTK_RESPONSE_YES)
-						achou = localiza_de_fato(0, 0, bytes_chave, tamanho_bytes, xf);
+						achou = xchange_find(xf, 0, 0, bytes_chave, tamanho_bytes);
 				}
 				else
 				{
 					if (mostraDialogoSimNao("A busca alcançou o fim do intervalo e não localizou a sequência.\nDeseja buscar a partir do início do intervalo?") == GTK_RESPONSE_YES)
-						achou = localiza_de_fato(localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes, xf);
+						achou = xchange_find(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
 				}
 			}
 		}
