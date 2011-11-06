@@ -513,6 +513,8 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 		int p;
 		size_t got;
 		got = xchange_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
+		if (got == 0)
+			break;
 		size_t internal_limit = got-key_length;
 
 		for (p = 0; p <= internal_limit; p++)
@@ -529,8 +531,60 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 
 	free(buffer);
 
-	if (achou + key_length > until)
+	return achou;
+}
+
+off_t xchange_find_backwards(const XChangeFile * xfile, off_t from, off_t until, const uint8_t *key, size_t key_length)
+{
+	const size_t BUFFER_SIZE = 1024 * 1024;
+	off_t offset;
+	off_t achou = (off_t) -1;
+	uint8_t *buffer;
+
+	if (xfile == NULL || key == NULL || key_length == 0)
+		return achou;
+	if (until && until < from)
+		return achou;
+
+	buffer = malloc(BUFFER_SIZE);
+	if (buffer == NULL)
 		return (off_t) -1;
+
+	if (until == 0 || until > xchange_get_size(xfile))
+		until = xchange_get_size(xfile);
+
+	offset = until - from < BUFFER_SIZE ? from : until - BUFFER_SIZE;
+
+	while (1)
+	{
+		int p;
+		size_t got;
+		got = xchange_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
+		if (got == 0)
+			break;
+		size_t internal_limit = got-key_length;
+
+		for (p = internal_limit; p >= 0; p--)
+		{
+			if (memcmp(&buffer[p], key, key_length) == 0)
+			{
+				achou = offset + p;
+				break;
+			}
+		}
+		if (achou != (off_t) -1)
+			break;
+
+		if (offset <= from)
+			break;
+
+		if (offset < BUFFER_SIZE - key_length + 1)
+			offset = 0;
+		else
+			offset -= BUFFER_SIZE - key_length + 1;
+	}
+
+	free(buffer);
 
 	return achou;
 }

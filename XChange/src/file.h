@@ -26,6 +26,7 @@ void xchange_close(XChangeFile * xfile);
 size_t xchange_get_bytes(const XChangeFile * xfile, off_t offset, uint8_t *bytes, size_t size);
 size_t xchange_get_size(const XChangeFile * xfile);
 off_t xchange_find(const XChangeFile * xfile, off_t start, off_t end, const uint8_t *key, size_t key_length);
+off_t xchange_find_backwards(const XChangeFile * xfile, off_t start, off_t end, const uint8_t *key, size_t key_length);
 
 // File navigation
 typedef enum
