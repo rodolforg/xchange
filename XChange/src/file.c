@@ -495,6 +495,8 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 	off_t achou = (off_t) -1;
 	uint8_t *buffer;
 
+	if (xfile == NULL || key == NULL || key_length == 0)
+		return achou;
 	if (until && until < from)
 		return achou;
 
@@ -502,17 +504,17 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 	if (buffer == NULL)
 		return (off_t) -1;
 
-	if (until == 0)
+	if (until == 0 || until > xchange_get_size(xfile))
 		until = xchange_get_size(xfile);
 
-	for (offset = from; offset + key_length <= until; offset += BUFFER_SIZE - key_length)
+	for (offset = from; offset + key_length -1 <= until; offset += BUFFER_SIZE - key_length + 1)
 	{
 
 		int p;
-		size_t got = xchange_get_bytes(xfile, offset, buffer, BUFFER_SIZE);
+		size_t got;
+		got = xchange_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
 		size_t internal_limit = got-key_length;
-		if (offset + internal_limit > until)
-			break;
+
 		for (p = 0; p <= internal_limit; p++)
 		{
 			if (memcmp(&buffer[p], key, key_length) == 0)
@@ -527,7 +529,7 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 
 	free(buffer);
 
-	if (achou > until)
+	if (achou + key_length > until)
 		return (off_t) -1;
 
 	return achou;
