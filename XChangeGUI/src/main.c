@@ -359,6 +359,91 @@ void elabora_menu_recentes()
 	}
 }
 
+static gboolean drag_drop_handler(GtkWidget      *widget,
+        GdkDragContext *drag_context,
+        gint            x,
+        gint            y,
+        guint           time,
+        gpointer        user_data)
+{
+	GdkAtom         target_type;
+
+	target_type = gtk_drag_dest_find_target(widget, drag_context, gtk_drag_dest_get_target_list(widget));
+	if (target_type != GDK_NONE)
+	{
+		gtk_drag_get_data
+						(
+								widget,         /* will receive 'drag-data-received' signal */
+								drag_context,        /* represents the current state of the DnD */
+								target_type,    /* the target type we want */
+								time            /* time stamp */
+						);
+
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static void drag_data_received_handler
+(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
+        GtkSelectionData *selection_data, guint target_type, guint time,
+        gpointer data)
+{
+	gchar *nome = gdk_atom_name(gtk_selection_data_get_target(selection_data));
+	g_print("Received: %s\n", nome);
+	if (g_strcmp0(nome, "text/uri-list") == 0)
+	{
+		gchar **uris = gtk_selection_data_get_uris (selection_data);
+		if (uris)
+		{
+			if (uris[0] != NULL)
+			{
+				gchar *arquivo = g_filename_from_uri(uris[0], NULL, NULL);
+				if (arquivo != NULL)
+				{
+					tenta_abrir_arquivo(arquivo);
+					g_free(arquivo);
+				}
+			}
+			g_strfreev(uris);
+		}
+	}
+	g_free(nome);
+
+	gtk_drag_finish(context, TRUE, FALSE, time);
+}
+
+void configura_arrastar_e_soltar()
+{
+	enum {
+		TARGET_STRING,
+	};
+
+	/* datatype (string), restrictions on DnD (GtkTargetFlags), datatype (int) */
+	static GtkTargetEntry target_list[] = {
+			{ "text/uri-list", 0, TARGET_STRING },
+			{ "STRING",     0, TARGET_STRING },
+			{ "text/plain", 0, TARGET_STRING },
+	};
+
+	static guint n_targets = G_N_ELEMENTS (target_list);
+	gtk_drag_dest_set(hexv,GTK_DEST_DEFAULT_ALL,NULL,0,GDK_ACTION_COPY);
+	gtk_drag_dest_set
+		(
+			hexv,              /* widget that will accept a drop */
+			GTK_DEST_DEFAULT_MOTION /* default actions for dest on DnD */
+			| GTK_DEST_DEFAULT_HIGHLIGHT,
+			target_list,            /* lists of target to support */
+			n_targets,              /* size of list */
+			GDK_ACTION_COPY         /* what to do with data after dropped */
+		);
+
+	g_signal_connect(hexv, "drag-data-received", G_CALLBACK(drag_data_received_handler),
+					main_window);
+	g_signal_connect(hexv, "drag-drop", G_CALLBACK(drag_drop_handler),
+					main_window);
+}
+
 int main(int argc, char *argv[])
 {
 	int qtdErros = 0;
@@ -423,6 +508,9 @@ int main(int argc, char *argv[])
 		// Abre arquivo listado na linha de comando
 		abre_arquivo(argv[1]);
 	}
+
+	// Arrastar e soltar
+	configura_arrastar_e_soltar();
 
 	gtk_main();
 
