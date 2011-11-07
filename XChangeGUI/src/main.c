@@ -719,6 +719,9 @@ G_MODULE_EXPORT void on_action_salvar_como_activate(GtkAction *action,
 
 	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
 
+	if (nomeArquivoAtual != NULL)
+		gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(dialog), nomeArquivoAtual);
+
 	gint result = gtk_dialog_run(GTK_DIALOG(dialog));
 
 	if (result == GTK_RESPONSE_OK)
