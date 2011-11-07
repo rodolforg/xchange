@@ -390,7 +390,7 @@ static void drag_data_received_handler
         gpointer data)
 {
 	gchar *nome = gdk_atom_name(gtk_selection_data_get_target(selection_data));
-	g_print("Received: %s\n", nome);
+
 	if (g_strcmp0(nome, "text/uri-list") == 0)
 	{
 		gchar **uris = gtk_selection_data_get_uris (selection_data);
@@ -408,6 +408,9 @@ static void drag_data_received_handler
 			g_strfreev(uris);
 		}
 	}
+
+	// TODO: Aceitar texto para ser inserido!
+
 	g_free(nome);
 
 	gtk_drag_finish(context, TRUE, FALSE, time);
@@ -775,10 +778,10 @@ static gboolean tenta_abrir_arquivo(const char *filename)
 	{
 		// TODO: Perguntar se quer salvar, descartar, cancelar
 		gint resposta = mostraDialogoSimNao("Existem alterações que não foram salvas.\nDeseja realmente abrir um arquivo?");
-		if (resposta == GTK_RESPONSE_YES)
-		{
-			fecharArquivo();
-		}
+		if (resposta != GTK_RESPONSE_YES)
+			return FALSE;
+
+		fecharArquivo();
 	}
 	else if (nomeArquivoAtual != NULL)
 	{
