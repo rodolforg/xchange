@@ -1464,7 +1464,7 @@ int xchange_replace_bytes(XChangeFile * xfile, off_t offset, const uint8_t *byte
 				dados = d;
 			else if (tam == 0)
 			{
-				free(dados);
+				// Já vai ter liberado dados no realloc
 				dados = NULL;
 			}
 		}
