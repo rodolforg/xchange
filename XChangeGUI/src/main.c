@@ -58,6 +58,16 @@ GtkWidget *radiobutton_localizar_bytes;
 GtkWidget *checkbutton_localizar_para_tras;
 GtkAction *action_localizar;
 
+GtkWidget *vbox_substituir;
+GtkWidget *entry_valor_para_substituir;
+GtkWidget *button_localizar;
+GtkWidget *button_substituir;
+GtkWidget *button_substituir_todos;
+GtkWidget *checkbutton_aceitar_alterar_tamanho_ao_substituir;
+GtkWidget *vbox_substituir_por_tamanho_diferente;
+GtkAction *action_substituir;
+GtkAction *action_substituir_todos;
+
 GtkAction *toggleaction_visao_tabela;
 GtkAction *radioaction_visao_codificao_padronizada;
 GtkAction *radioaction_visao_tabela1;
@@ -247,6 +257,25 @@ static gboolean mostra_janela()
 			builder, "checkbutton_localizar_para_tras"));
 	action_localizar = GTK_ACTION(gtk_builder_get_object(
 			builder, "action_localizar"));
+
+	vbox_substituir = GTK_WIDGET(gtk_builder_get_object(
+			builder, "vbox_substituir"));
+	entry_valor_para_substituir = GTK_WIDGET(gtk_builder_get_object(
+			builder, "entry_valor_para_substituir"));
+	button_localizar = GTK_WIDGET(gtk_builder_get_object(
+			builder, "button_localizar"));
+	button_substituir = GTK_WIDGET(gtk_builder_get_object(
+			builder, "button_substituir"));
+	button_substituir_todos = GTK_WIDGET(gtk_builder_get_object(
+			builder, "button_substituir_todos"));
+	checkbutton_aceitar_alterar_tamanho_ao_substituir = GTK_WIDGET(gtk_builder_get_object(
+			builder, "checkbutton_aceitar_alterar_tamanho_ao_substituir"));
+	vbox_substituir_por_tamanho_diferente = GTK_WIDGET(gtk_builder_get_object(
+			builder, "vbox_substituir_por_tamanho_diferente"));
+	action_substituir = GTK_ACTION(gtk_builder_get_object(
+			builder, "action_substituir"));
+	action_substituir_todos = GTK_ACTION(gtk_builder_get_object(
+			builder, "action_substituir_todos"));
 
 	toggleaction_visao_tabela = GTK_ACTION(gtk_builder_get_object(
 			builder, "toggleaction_visao_tabela"));
@@ -1527,7 +1556,167 @@ void on_action_sobre_activate(GtkAction *action, gpointer data)
 G_MODULE_EXPORT
 void on_action_abrir_janela_localizar_activate(GtkAction *action, gpointer data)
 {
+	gtk_widget_hide(vbox_substituir);
+	gtk_action_set_visible(action_substituir, FALSE);
+	gtk_action_set_visible(action_substituir_todos, FALSE);
+	gtk_action_set_visible(action_localizar, TRUE);
+
 	gtk_dialog_run(GTK_DIALOG(dialog_localizar));
+	//gtk_widget_hide(dialog_localizar);
+}
+
+static struct DadosLocalizar * obtem_parametros_localizar()
+{
+	off_t pos_inicial = 0;
+	off_t pos_final = 0;
+	uint8_t *bytes_chave = NULL;
+	int tamanho_bytes = 0;
+	gboolean localizar_proximo = !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton_localizar_para_tras));
+
+	struct DadosLocalizar *parametrosLocalizar = malloc(sizeof(struct DadosLocalizar));
+	if (parametrosLocalizar == NULL)
+		return NULL;
+
+	gboolean pesquisar_do_cursor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
+			radiobutton_localizar_do_cursor));
+	if (pesquisar_do_cursor)
+		pos_inicial = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
+
+	gboolean pesquisar_intervalo = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
+			radiobutton_localizar_no_intervalo));
+	if (pesquisar_intervalo)
+	{
+		gchar *texto;
+
+		texto = gtk_editable_get_chars(GTK_EDITABLE(spinbutton_inicio_localizar), 0, -1);
+		pos_inicial = converte_texto_em_posicao(texto);
+		g_free(texto);
+
+		texto = gtk_editable_get_chars(GTK_EDITABLE(spinbutton_fim_localizar), 0, -1);
+		pos_final = converte_texto_em_posicao(texto);
+		g_free(texto);
+
+	}
+	else if (!localizar_proximo)
+	{
+		pos_final ^= pos_inicial;
+		pos_inicial ^= pos_final;
+		pos_final ^= pos_inicial;
+	}
+
+	limpa_barra_de_estado("Localização");
+
+	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(
+			entry_valor_a_localizar));
+	if (texto == NULL)
+	{
+		pipoca_na_barra_de_estado("Localização", "Não conseguiu obter texto a localizar.");
+		free(parametrosLocalizar);
+		return NULL;
+	}
+
+	gint tamanho_texto = strlen(texto);
+	if (tamanho_texto == 0)
+	{
+		pipoca_na_barra_de_estado("Localização", "Sem conteúdo para localizar.");
+		free(parametrosLocalizar);
+		return NULL;
+	}
+
+	gboolean localiza_bytes = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
+			radiobutton_localizar_bytes));
+
+	if (!localiza_bytes)
+	{
+		// Localiza texto
+		bytes_chave = converte_pela_codificacao(texto, &tamanho_bytes, "Localização");
+	}
+	else
+	{
+		// A string é uma sequência de bytes
+		bytes_chave = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, "Localização");
+	}
+	if (bytes_chave == NULL)
+	{
+		pipoca_na_barra_de_estado("Localização", "Não conseguiu interpretar o texto a localizar.");
+		free(parametrosLocalizar);
+		return NULL;
+	}
+	free(bytes_chave);
+
+	parametrosLocalizar->texto_a_localizar = g_strdup(texto);
+	parametrosLocalizar->localizando_bytes = localiza_bytes;
+	parametrosLocalizar->localizando_proximo = localizar_proximo;
+	parametrosLocalizar->inicio = pos_inicial;
+	parametrosLocalizar->fim = pos_final;
+
+	return parametrosLocalizar;
+}
+
+// Diz se os tamanhos dos textos a localizar e para substituir são iguais
+static gboolean confere_tamanhos_textos_localizar_substituir(gboolean localizando_bytes)
+{
+	uint8_t *bytes = NULL, *bytes_substituidores = NULL;
+	int tamanho_bytes = 0, tamanho_substituidor = 0;
+
+	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(entry_valor_a_localizar));
+	const gchar *texto_substituidor = gtk_entry_get_text(GTK_ENTRY(entry_valor_para_substituir));
+
+	if (localizando_bytes)
+	{
+		bytes = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, NULL);
+		bytes_substituidores = recupera_bytes_de_texto_hexa(texto_substituidor, &tamanho_substituidor, NULL);
+	}
+	else
+	{
+		bytes = converte_pela_codificacao(texto, &tamanho_bytes, NULL);
+		bytes_substituidores = converte_pela_codificacao(texto_substituidor, &tamanho_substituidor, NULL);
+	}
+
+	free(bytes);
+	free(bytes_substituidores);
+
+	if (bytes != NULL && bytes_substituidores == NULL)
+		return FALSE;
+	if (bytes != NULL && bytes_substituidores != NULL)
+		return tamanho_bytes == tamanho_substituidor;
+	return TRUE;
+}
+
+
+G_MODULE_EXPORT
+void on_action_abrir_janela_substituir_activate(GtkAction *action, gpointer data)
+{
+	gtk_widget_show(vbox_substituir);
+	gtk_action_set_visible(action_localizar, FALSE);
+	gtk_action_set_visible(action_substituir, TRUE);
+//	gtk_widget_set_sensitive(button_substituir, FALSE);
+	gtk_action_set_visible(action_substituir_todos, TRUE);
+
+//	gtk_widget_hide();
+
+	if (gtk_widget_get_visible(button_substituir))
+	{
+		struct DadosLocalizar *parametrosLocalizar = obtem_parametros_localizar();
+		if (parametrosLocalizar == NULL || confere_tamanhos_textos_localizar_substituir(parametrosLocalizar->localizando_bytes))
+			gtk_widget_hide(vbox_substituir_por_tamanho_diferente);
+		else
+			gtk_widget_show(vbox_substituir_por_tamanho_diferente);
+
+		if (parametrosLocalizar != NULL)
+		{
+			destroi_dados_localizar(parametrosLocalizar);
+			free(parametrosLocalizar);
+		}
+	}
+
+	gtk_dialog_run(GTK_DIALOG(dialog_localizar));
+	//gtk_widget_hide(dialog_localizar);
+}
+
+G_MODULE_EXPORT
+void on_button_localizar_cancelar_clicked(GtkButton *button, gpointer data)
+{
 	gtk_widget_hide(dialog_localizar);
 }
 
@@ -1548,6 +1737,18 @@ static void destroi_dados_localizar(struct DadosLocalizar *localizar)
 	// Liberar?
 }
 
+
+// Verifica se ambos são iguais
+static gboolean compara_parametros_localizar(const struct DadosLocalizar *p1, const struct DadosLocalizar *p2)
+{
+	g_assert(p1 != NULL && p2 != NULL);
+	return (g_strcmp0(p1->texto_a_localizar, p2->texto_a_localizar) == 0)
+			&& (p1->localizando_bytes == p2->localizando_bytes)
+			&& (p1->localizando_proximo == p2->localizando_proximo)
+			&& (p1->inicio == p2->inicio)
+			&& (p1->fim == p2->fim);
+}
+
 /*
  * Converte o texto em bytes conforme codificação ativa.
  */
@@ -1555,6 +1756,9 @@ static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes,
 {
 	int tamanho;
 	uint8_t *bytes_chave;
+
+	if (tamanho_bytes != NULL)
+		*tamanho_bytes = -1;
 
 	if (texto == NULL)
 		return NULL;
@@ -1590,6 +1794,8 @@ static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes,
 
 static uint8_t *recupera_bytes_de_texto_hexa(const gchar *texto, int *tamanho_bytes, const gchar *contexto)
 {
+	if (tamanho_bytes != NULL)
+		*tamanho_bytes = -1;
 	if (texto == NULL)
 		return NULL;
 
@@ -1659,7 +1865,7 @@ static uint8_t *recupera_bytes_de_texto_hexa(const gchar *texto, int *tamanho_by
 	return bytes_chave;
 }
 
-static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct DadosLocalizar *localizar)
+static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct DadosLocalizar *localizar, gboolean permitir_reiniciar_intervalo)
 {
 	uint8_t *bytes_chave = NULL;
 	int tamanho_bytes = 0;
@@ -1685,7 +1891,7 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 	else
 		achou = xchange_find_backwards(xf, localizar->inicio, from, bytes_chave, tamanho_bytes);
 	// Não encontrou: tentar de novo?
-	if (achou == (off_t) -1)
+	if (achou == (off_t) -1 && permitir_reiniciar_intervalo)
 	{
 		if (localizar->localizando_proximo)
 		{
@@ -1742,83 +1948,45 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 	return TRUE;
 }
 
+
+
 G_MODULE_EXPORT
 void on_action_localizar_activate(GtkAction *action, gpointer data)
 {
-	off_t pos_inicial = 0;
-	off_t pos_final = 0;
-	uint8_t *bytes_chave = NULL;
-	int tamanho_bytes = 0;
-
-	gboolean pesquisar_do_cursor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
-			radiobutton_localizar_do_cursor));
-	if (pesquisar_do_cursor)
-		pos_inicial = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
-
-	gboolean pesquisar_intervalo = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
-			radiobutton_localizar_no_intervalo));
-	if (pesquisar_intervalo)
-	{
-		gchar *texto;
-
-		texto = gtk_editable_get_chars(GTK_EDITABLE(spinbutton_inicio_localizar), 0, -1);
-		pos_inicial = converte_texto_em_posicao(texto);
-		g_free(texto);
-
-		texto = gtk_editable_get_chars(GTK_EDITABLE(spinbutton_fim_localizar), 0, -1);
-		pos_final = converte_texto_em_posicao(texto);
-		g_free(texto);
-
-	}
+	struct DadosLocalizar *parametrosLocalizar;
 
 	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
 
-	limpa_barra_de_estado("Localização");
+	if (xf == NULL)
+		return;
 
-	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(
-			entry_valor_a_localizar));
-	if (texto == NULL)
+	parametrosLocalizar = obtem_parametros_localizar();
+	if (parametrosLocalizar == NULL)
+		return;
+
+	// Compara para ver se é a pesquisa anterior
+	//  Se for, localiza próximo/anterior. Se não for, recomeça.
+	if (compara_parametros_localizar(&dados_localizar, parametrosLocalizar))
 	{
-		pipoca_na_barra_de_estado("Localização", "Não conseguiu obter texto a localizar.");
+		destroi_dados_localizar(parametrosLocalizar);
+		g_free(parametrosLocalizar);
+		if (dados_localizar.localizando_proximo)
+			on_action_localizar_proximo_activate(NULL, data);
+		else
+			on_action_localizar_anterior_activate(NULL, data);
 		return;
 	}
-
-	gint tamanho_texto = strlen(texto);
-	if (tamanho_texto == 0)
-	{
-		pipoca_na_barra_de_estado("Localização", "Sem conteúdo para localizar.");
-		return;
-	}
-
-	gboolean localiza_bytes = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
-			radiobutton_localizar_bytes));
-
-	if (!localiza_bytes)
-	{
-		// Localiza texto
-		bytes_chave = converte_pela_codificacao(texto, &tamanho_bytes, "Localização");
-	}
-	else
-	{
-		// A string é uma sequência de bytes
-		bytes_chave = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, "Localização");
-	}
-	if (bytes_chave == NULL)
-	{
-		pipoca_na_barra_de_estado("Localização", "Não conseguiu interpretar o texto a localizar.");
-		return;
-	}
-	free(bytes_chave);
 
 	// Libera dados em pesquisa
 	destroi_dados_localizar(&dados_localizar);
-	dados_localizar.texto_a_localizar = g_strdup(texto);
-	dados_localizar.localizando_bytes = localiza_bytes;
-	dados_localizar.localizando_proximo = !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton_localizar_para_tras));
-	dados_localizar.inicio = pos_inicial;
-	dados_localizar.fim = pos_final;
+	dados_localizar = *parametrosLocalizar;
 
-	localiza_outro(dados_localizar.localizando_proximo ? pos_inicial : pos_final, xf, &dados_localizar);
+	//destroi_dados_localizar(parametrosLocalizar);
+	g_free(parametrosLocalizar);
+
+	localiza_outro(dados_localizar.localizando_proximo ? dados_localizar.inicio : dados_localizar.fim, xf, &dados_localizar, TRUE);
+
+//	gtk_widget_hide(dialog_localizar);
 }
 
 G_MODULE_EXPORT
@@ -1836,7 +2004,7 @@ void on_action_localizar_proximo_activate(GtkAction *action, gpointer data)
 	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
 	off_t posicao_cursor = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
 
-	localiza_outro(posicao_cursor + 1, xf, &dados_localizar);
+	localiza_outro(posicao_cursor + 1, xf, &dados_localizar, TRUE);
 }
 
 G_MODULE_EXPORT
@@ -1864,7 +2032,7 @@ void on_action_localizar_anterior_activate(GtkAction *action, gpointer data)
 			posicao_cursor = xchange_get_size(xf);
 		else
 			posicao_cursor -= 1;
-	localiza_outro(posicao_cursor, xf, &dados_localizar);
+	localiza_outro(posicao_cursor, xf, &dados_localizar, TRUE);
 }
 
 G_MODULE_EXPORT
@@ -1872,6 +2040,7 @@ void on_radiobutton_localizar_no_intervalo_toggled(GtkToggleButton *toggle, gpoi
 {
 	gtk_widget_set_sensitive(table_localizar_no_intervalo, gtk_toggle_button_get_active(toggle));
 }
+
 
 static gboolean verifica_validade_sequencia_bytes()
 {
@@ -1923,16 +2092,20 @@ G_MODULE_EXPORT
 void on_entry_valor_a_localizar_changed(GtkEntry *entry, gpointer data)
 {
 	const gchar *texto = gtk_entry_get_text(GTK_ENTRY(
-			entry_valor_a_localizar));
+			entry));
 	if (texto == NULL || g_utf8_strlen(texto, -1)==0)
 	{
 		gtk_widget_set_sensitive(radiobutton_localizar_bytes, TRUE);
 		gtk_widget_set_sensitive(radiobutton_localizar_texto, TRUE);
-		gtk_action_set_sensitive(action_localizar, TRUE);
+		gtk_action_set_sensitive(action_localizar, FALSE);
+		gtk_action_set_sensitive(action_substituir, FALSE);
+		gtk_action_set_sensitive(action_substituir_todos, FALSE);
 		return;
 	}
 
 	gtk_action_set_sensitive(action_localizar, TRUE);
+	gtk_action_set_sensitive(action_substituir, TRUE);
+	gtk_action_set_sensitive(action_substituir_todos, TRUE);
 
 	// Confere se pode ser uma sequência de bytes
 	if (verifica_validade_sequencia_bytes())
@@ -1943,7 +2116,11 @@ void on_entry_valor_a_localizar_changed(GtkEntry *entry, gpointer data)
 	{
 		gtk_widget_set_sensitive(radiobutton_localizar_bytes, FALSE);
 		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton_localizar_bytes)))
+		{
 			gtk_action_set_sensitive(action_localizar, FALSE);
+			gtk_action_set_sensitive(action_substituir, FALSE);
+			gtk_action_set_sensitive(action_substituir_todos, FALSE);
+		}
 	}
 
 	// Confere se pode ser texto mesmo
@@ -1955,7 +2132,23 @@ void on_entry_valor_a_localizar_changed(GtkEntry *entry, gpointer data)
 	{
 		gtk_widget_set_sensitive(radiobutton_localizar_texto, FALSE);
 		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton_localizar_texto)))
+		{
 			gtk_action_set_sensitive(action_localizar, FALSE);
+			gtk_action_set_sensitive(action_substituir, FALSE);
+			gtk_action_set_sensitive(action_substituir_todos, FALSE);
+		}
+	}
+
+	if (gtk_widget_get_visible(button_substituir))
+	{
+		struct DadosLocalizar *parametrosLocalizar = obtem_parametros_localizar();
+		if (confere_tamanhos_textos_localizar_substituir(parametrosLocalizar->localizando_bytes))
+			gtk_widget_hide(vbox_substituir_por_tamanho_diferente);
+		else
+			gtk_widget_show(vbox_substituir_por_tamanho_diferente);
+
+		destroi_dados_localizar(parametrosLocalizar);
+		free(parametrosLocalizar);
 	}
 }
 
@@ -1966,6 +2159,8 @@ void on_radiobutton_localizar_texto_toggled(GtkRadioButton *radiobutton, gpointe
 		return;
 
 	gtk_action_set_sensitive(action_localizar, TRUE);
+	gtk_action_set_sensitive(action_substituir, TRUE);
+	gtk_action_set_sensitive(action_substituir_todos, TRUE);
 
 	if (verifica_validade_sequencia_caracteres())
 	{
@@ -1975,8 +2170,17 @@ void on_radiobutton_localizar_texto_toggled(GtkRadioButton *radiobutton, gpointe
 	{
 		gtk_widget_set_sensitive(GTK_WIDGET(radiobutton), FALSE);
 		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton)))
+		{
 			gtk_action_set_sensitive(action_localizar, FALSE);
+			gtk_action_set_sensitive(action_substituir, FALSE);
+			gtk_action_set_sensitive(action_substituir_todos, FALSE);
+		}
 	}
+
+	if (confere_tamanhos_textos_localizar_substituir(FALSE))
+		gtk_widget_hide(vbox_substituir_por_tamanho_diferente);
+	else
+		gtk_widget_show(vbox_substituir_por_tamanho_diferente);
 }
 
 G_MODULE_EXPORT
@@ -1986,6 +2190,8 @@ void on_radiobutton_localizar_bytes_toggled(GtkRadioButton *radiobutton, gpointe
 		return;
 
 	gtk_action_set_sensitive(action_localizar, TRUE);
+	gtk_action_set_sensitive(action_substituir, TRUE);
+	gtk_action_set_sensitive(action_substituir_todos, TRUE);
 
 	if (verifica_validade_sequencia_bytes())
 	{
@@ -1995,8 +2201,17 @@ void on_radiobutton_localizar_bytes_toggled(GtkRadioButton *radiobutton, gpointe
 	{
 		gtk_widget_set_sensitive(GTK_WIDGET(radiobutton), FALSE);
 		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radiobutton)))
+		{
 			gtk_action_set_sensitive(action_localizar, FALSE);
+			gtk_action_set_sensitive(action_substituir, FALSE);
+			gtk_action_set_sensitive(action_substituir_todos, FALSE);
+		}
 	}
+
+	if (confere_tamanhos_textos_localizar_substituir(TRUE))
+		gtk_widget_hide(vbox_substituir_por_tamanho_diferente);
+	else
+		gtk_widget_show(vbox_substituir_por_tamanho_diferente);
 }
 
 G_MODULE_EXPORT
@@ -2007,6 +2222,154 @@ void on_checkbutton_localizar_para_tras_toggled(GtkCheckButton *checkbutton, gpo
 	else
 		gtk_button_set_label(GTK_BUTTON(radiobutton_localizar_do_inicio), "Desde o início");
 }
+
+G_MODULE_EXPORT
+void on_action_substituir_activate(GtkAction *action, gpointer data)
+{
+	// Verificar se há algo selecionado e se ele corresponde ao texto que deve ser substituído
+	//  Se for, substitui
+	//  Senão, apenas localiza a próxima etapa coincidente
+
+	uint8_t *bytes = NULL, *bytes_selecionados = NULL;
+	int tamanho_bytes;
+	size_t tamanho_selecionado;
+	const gchar *texto = NULL;
+
+	struct DadosLocalizar *parametrosLocalizar = obtem_parametros_localizar();
+	if (parametrosLocalizar == NULL)
+		return;
+
+	gboolean pode_alterar_tamanho = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton_aceitar_alterar_tamanho_ao_substituir));
+
+	texto = gtk_entry_get_text(GTK_ENTRY(entry_valor_a_localizar));
+
+	if (parametrosLocalizar->localizando_bytes)
+	{
+		if (!verifica_validade_sequencia_bytes())
+		{
+			mostraMensagemErro("Sequência de bytes inválida!");
+			destroi_dados_localizar(parametrosLocalizar);
+			g_free(parametrosLocalizar);
+			return;
+		}
+		else
+		{
+			bytes = recupera_bytes_de_texto_hexa(texto, &tamanho_bytes, NULL);
+		}
+	}
+	else
+	{
+		if (!verifica_validade_sequencia_caracteres())
+		{
+			mostraMensagemErro("Sequência de caracteres inválida!");
+			destroi_dados_localizar(parametrosLocalizar);
+			g_free(parametrosLocalizar);
+			return;
+		}
+		else
+		{
+			bytes = converte_pela_codificacao(texto, &tamanho_bytes, NULL);
+		}
+	}
+
+	if (bytes == NULL)
+		return; // FIXME: Reclamar o motivo: texto em branco?
+
+	bytes_selecionados = xchange_hex_view_get_selected_bytes(XCHANGE_HEX_VIEW(hexv), &tamanho_selecionado);
+
+	gboolean precisa_selecionar = (bytes == NULL || bytes_selecionados == NULL || tamanho_bytes != tamanho_selecionado || memcmp(bytes, bytes_selecionados, tamanho_bytes) != 0);
+	free(bytes);
+	free(bytes_selecionados);
+
+	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
+
+	if (precisa_selecionar)
+	{
+		off_t sel_inicio, sel_fim;
+		off_t pos_cursor = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
+		off_t pos_inicio;
+		if (xchange_hex_view_get_selection_bounds(XCHANGE_HEX_VIEW(hexv), &sel_inicio, &sel_fim))
+		{
+			if (parametrosLocalizar->localizando_proximo)
+				pos_inicio = sel_inicio;
+			else
+				pos_inicio = sel_fim;
+		}
+		else
+			pos_inicio = pos_cursor;
+		if (pos_inicio < parametrosLocalizar->inicio || (parametrosLocalizar->fim > 0 && pos_inicio > parametrosLocalizar->fim))
+		{
+			if (parametrosLocalizar->localizando_proximo)
+				pos_inicio = parametrosLocalizar->inicio;
+			else
+				pos_inicio = parametrosLocalizar->fim;
+		}
+		else
+		{
+			if (parametrosLocalizar->localizando_proximo)
+			{
+				if (pos_inicio < parametrosLocalizar->fim)
+					pos_inicio ++;
+			}
+			else
+			{
+				if (pos_inicio > parametrosLocalizar->inicio)
+					pos_inicio --;
+			}
+		}
+		localiza_outro(pos_inicio, xf, parametrosLocalizar, TRUE);
+		destroi_dados_localizar(parametrosLocalizar);
+		g_free(parametrosLocalizar);
+		return;
+	}
+
+	off_t inicio_selecao, fim_selecao;
+	uint8_t *bytes_substituidores = NULL;
+	int tamanho_substituidor;
+	const gchar *texto_para_substituir = gtk_entry_get_text(GTK_ENTRY(entry_valor_para_substituir));
+	if (parametrosLocalizar->localizando_bytes)
+	{
+		bytes_substituidores = recupera_bytes_de_texto_hexa(texto_para_substituir, &tamanho_substituidor, NULL);
+	}
+	else
+	{
+		bytes_substituidores = converte_pela_codificacao(texto_para_substituir, &tamanho_substituidor, NULL);
+	}
+	if (tamanho_substituidor < 0)
+		tamanho_substituidor = 0;
+
+
+	xchange_hex_view_get_selection_bounds(XCHANGE_HEX_VIEW(hexv), &inicio_selecao, &fim_selecao);
+
+
+	int menor_tamanho = MIN(tamanho_substituidor, tamanho_selecionado);
+	xchange_hex_view_replace_bytes(XCHANGE_HEX_VIEW(hexv), bytes_substituidores, inicio_selecao, menor_tamanho);
+
+	if (pode_alterar_tamanho)
+	{
+		// TODO: Agrupar ações de desfazer/refazer (para virar uma coisa só isso aqui: substituir e excluir/ou/inserir)
+		if (tamanho_substituidor > tamanho_selecionado)
+		{
+			xchange_hex_view_insert_bytes(XCHANGE_HEX_VIEW(hexv), bytes_substituidores + tamanho_selecionado, inicio_selecao+ tamanho_selecionado, tamanho_substituidor - tamanho_selecionado);
+			xchange_hex_view_select(XCHANGE_HEX_VIEW(hexv), inicio_selecao, tamanho_substituidor);
+		}
+		else if (tamanho_substituidor && tamanho_substituidor < tamanho_selecionado)
+		{
+			xchange_hex_view_delete_bytes(XCHANGE_HEX_VIEW(hexv), inicio_selecao+ tamanho_substituidor, tamanho_selecionado - tamanho_substituidor);
+			xchange_hex_view_select(XCHANGE_HEX_VIEW(hexv), inicio_selecao, tamanho_substituidor);
+		}
+		xchange_hex_view_select(XCHANGE_HEX_VIEW(hexv), inicio_selecao, tamanho_substituidor);
+	}
+
+	free(bytes_substituidores);
+
+	localiza_outro(parametrosLocalizar->localizando_proximo ? fim_selecao+1 : inicio_selecao - 1, xf, parametrosLocalizar, TRUE);
+
+	destroi_dados_localizar(&dados_localizar);
+	dados_localizar = *parametrosLocalizar;
+	g_free(parametrosLocalizar);
+}
+
 
 G_MODULE_EXPORT
 void on_action_fechar_arquivo_activate(GtkAction *action, gpointer data)
