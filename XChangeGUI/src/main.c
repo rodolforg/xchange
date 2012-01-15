@@ -106,7 +106,6 @@ struct DadosLocalizar
 GKeyFile* preferenciasKeyFile;
 Preferencias preferencias;
 
-gboolean file_changes_saved;
 gint changes_until_last_save;
 
 static void mudou_posicao_cursor(XChangeHexView *hexv, gpointer data);
@@ -551,7 +550,6 @@ int main(int argc, char *argv[])
 	id_tabela_atual = 0;
 
 
-	file_changes_saved = TRUE;
 	changes_until_last_save = 0;
 
 	gchar *autores[2] = {NULL, NULL};
@@ -622,7 +620,6 @@ static void fechar_arquivo()
 	xchange_hex_view_close_file(XCHANGE_HEX_VIEW(hexv));
 
 	gtk_window_set_title(GTK_WINDOW(main_window), g_get_application_name());
-	file_changes_saved = TRUE;
 }
 
 G_MODULE_EXPORT
@@ -652,7 +649,6 @@ static void novo_arquivo(gpointer data)
 	limpa_barra_de_estado("Arquivo");
 	XChangeFile * xf = xchange_open(NULL, NULL);
 	xchange_hex_view_load_file(XCHANGE_HEX_VIEW(hexv), xf);
-	file_changes_saved = TRUE;
 	changes_until_last_save = 0;
 }
 
@@ -728,7 +724,6 @@ static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 	if (!editavel)
 		showWarningMessage(GTK_WINDOW(main_window), "O arquivo só pôde ser aberto para leitura.");
 
-	file_changes_saved = TRUE;
 	changes_until_last_save = 0;
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
@@ -763,7 +758,6 @@ static gboolean salvar_arquivo_como(const gchar *nome_arquivo, gpointer data)
 		return FALSE;
 	}
 
-	file_changes_saved = TRUE;
 	changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
@@ -792,7 +786,6 @@ static gboolean salvar_arquivo(gpointer data)
 	}
 
 	pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
-	file_changes_saved = TRUE;
 	changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
@@ -2336,15 +2329,12 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data)
 
 	if (changes_until_last_save == xchange_get_undo_list_size(xf))
 	{
-		file_changes_saved = TRUE;
 		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 		filehandler_file_changed(fh, FALSE);
 	}
 	else
 	{
-		file_changes_saved = FALSE;
 		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), "*");
-
 		filehandler_file_changed(fh, TRUE);
 	}
 }
