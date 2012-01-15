@@ -669,7 +669,7 @@ void on_abrir_arquivo_definido_activate(GtkWidget *widget, gpointer data)
 
 static void acrescenta_aos_recentes(const gchar*nome_arquivo, gpointer data)
 {
-	GList * item_recente = g_list_find_custom(preferencias.arquivos_recentes, nome_arquivo, g_strcmp0);
+	GList * item_recente = g_list_find_custom(preferencias.arquivos_recentes, nome_arquivo, (GCompareFunc)g_strcmp0);
 	if (item_recente != NULL)
 	{
 		g_free(item_recente->data);
