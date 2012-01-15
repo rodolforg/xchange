@@ -908,7 +908,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
     <property name="gravity">center</property>
     <property name="program_name">heXchange</property>
     <property name="version">1.0</property>
-    <property name="copyright" translatable="yes">© 2011 RodolfoRG</property>
+    <property name="copyright">© 2011 RodolfoRG</property>
     <property name="comments" translatable="yes">Editor hexadecimal para uma edição binária mais prática</property>
     <property name="website">http://rodolfo.eng.br/hobby/hexchange</property>
     <property name="website_label" translatable="yes">Sítio do heXchange</property>
@@ -1099,25 +1099,25 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
         <col id="0" translatable="yes">Padrão do sistema</col>
       </row>
       <row>
-        <col id="0" translatable="yes">UTF-8</col>
+        <col id="0">UTF-8</col>
       </row>
       <row>
-        <col id="0" translatable="yes">ISO-8859-1</col>
+        <col id="0">ISO-8859-1</col>
       </row>
       <row>
-        <col id="0" translatable="yes">ISO-8859-15</col>
+        <col id="0">ISO-8859-15</col>
       </row>
       <row>
-        <col id="0" translatable="yes">MS-ANSI</col>
+        <col id="0">MS-ANSI</col>
       </row>
       <row>
-        <col id="0" translatable="yes">Shift-JIS</col>
+        <col id="0">Shift-JIS</col>
       </row>
       <row>
-        <col id="0" translatable="yes">EUC-JP</col>
+        <col id="0">EUC-JP</col>
       </row>
       <row>
-        <col id="0" translatable="yes">ASCII</col>
+        <col id="0">ASCII</col>
       </row>
     </data>
   </object>
