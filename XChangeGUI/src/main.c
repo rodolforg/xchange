@@ -664,7 +664,11 @@ G_MODULE_EXPORT
 void on_abrir_arquivo_definido_activate(GtkWidget *widget, gpointer data)
 {
 	// FIXME: dar um jeito sem usar variável global!
-	filehandler_open_file(fh, data);
+	// Duplica para não ser excluído por engano em acrescenta_aos_recentes
+	//   quando alguém clica em um item recente...
+	gchar *nome_arquivo = g_strdup(data);
+	filehandler_open_file(fh, nome_arquivo);
+	g_free(nome_arquivo);
 }
 
 static void acrescenta_aos_recentes(const gchar*nome_arquivo, gpointer data)
