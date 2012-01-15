@@ -1634,7 +1634,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_abrir</property>
-                <property name="label" translatable="yes">toolbutton1</property>
+                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1647,7 +1647,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_salvar</property>
-                <property name="label" translatable="yes">toolbutton2</property>
+                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1670,7 +1670,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_undo</property>
-                <property name="label" translatable="yes">toolbutton4</property>
+                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1683,7 +1683,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_redo</property>
-                <property name="label" translatable="yes">toolbutton5</property>
+                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1706,7 +1706,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_recortar</property>
-                <property name="label" translatable="yes">toolbutton7</property>
+                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1719,7 +1719,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_copiar</property>
-                <property name="label" translatable="yes">toolbutton8</property>
+                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1732,7 +1732,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_colar</property>
-                <property name="label" translatable="yes">toolbutton9</property>
+                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1755,7 +1755,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_abrir_janela_localizar</property>
-                <property name="label" translatable="yes">toolbutton11</property>
+                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
