@@ -309,7 +309,7 @@ static gboolean mostra_janela(Filehandler *fh)
 			"comboboxentry_codificacao_caracteres"));
 
 	// Configura as ações para o Filehandler
-	fh->actions.close = GTK_ACTION(gtk_builder_get_object(builder, "action_fechar"));
+	fh->actions.close = GTK_ACTION(gtk_builder_get_object(builder, "action_fechar_arquivo"));
 	fh->actions.save = GTK_ACTION(gtk_builder_get_object(builder, "action_salvar"));
 	fh->actions.save_as = GTK_ACTION(gtk_builder_get_object(builder, "action_salvar_como"));
 
