@@ -29,6 +29,9 @@
 
 #include "filehandler.h"
 
+#include <glib/gi18n.h>
+#define GETTEXT_PACKAGE "hexchange"
+#define HEXCHANGELOCALEDIR "mo"
 
 #define MAX_TABELAS 3
 
@@ -498,11 +501,16 @@ int main(int argc, char *argv[])
 	ultimo_diretorio = NULL;
 	nomeArquivoAtual = NULL;
 
+	setlocale(LC_ALL, "");
+	bindtextdomain (GETTEXT_PACKAGE, HEXCHANGELOCALEDIR);
+	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+	textdomain (GETTEXT_PACKAGE);
+
 	gtk_init(&argc, &argv);
 
 	g_set_prgname("hexchange");
 
-	g_set_application_name ("heXchange");
+	g_set_application_name (_("heXchange"));
 
 	{
 		FilehandlerCallbacks cb;
@@ -517,28 +525,28 @@ int main(int argc, char *argv[])
 		fh = filehandler_new(&cb, NULL, NULL); // TODO: user_data deveria estar aqui com os dados do aplicativo
 		if (fh == NULL)
 		{
-			showErrorMessage(NULL, "Não foi possível configurar para manipular os arquivos.");
+			showErrorMessage(NULL, _("Não foi possível configurar para manipular os arquivos."));
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	if (!mostra_janela(fh))
 	{
-		showErrorMessage(NULL, "Não foi possível carregar a interface.");
+		showErrorMessage(NULL, _("Não foi possível carregar a interface."));
 		filehandler_destroy(fh);
 		exit(EXIT_FAILURE);
 	}
 
 	inicia_preferencias_padrao(&preferencias);
 	if ( ! carrega_arquivo_preferencias(XCHANGE_HEX_VIEW(hexv), &preferencias) )
-		fprintf(stderr, "Problema nas preferências\n");
+		fprintf(stderr, _("Problema nas preferências\n"));
 
 
 	qtd_tabelas = MAX_TABELAS;
 	xt_tabela = calloc(qtd_tabelas, sizeof(XChangeTable*));
 	if (xt_tabela == NULL)
 	{
-		perror("Alocando espaço para tabelas");
+		perror(_("Alocando espaço para tabelas"));
 		filehandler_destroy(fh);
 		destroi_preferencias(&preferencias);
 		exit(EXIT_FAILURE);
@@ -703,7 +711,7 @@ static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 		xf = xchange_open(filename_decoded, "rb");
 		if (xf == NULL)
 		{
-			gchar *msg = g_strdup_printf("Não conseguiu carregar o arquivo %s .", filename_decoded);
+			gchar *msg = g_strdup_printf(_("Não conseguiu carregar o arquivo %s ."), filename_decoded);
 			showErrorMessage(GTK_WINDOW(main_window), msg);
 			g_free(msg);
 			g_free(filename_decoded);
@@ -716,13 +724,13 @@ static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 	if (!xchange_hex_view_load_file(XCHANGE_HEX_VIEW(hexv), xf))
 	{
 		xchange_close(xf);
-		showErrorMessage(GTK_WINDOW(main_window), "Não conseguiu exibir o arquivo!");
+		showErrorMessage(GTK_WINDOW(main_window), _("Não conseguiu exibir o arquivo!"));
 		return FALSE;
 	}
 
 	xchange_hex_view_set_editable(XCHANGE_HEX_VIEW(hexv), editavel);
 	if (!editavel)
-		showWarningMessage(GTK_WINDOW(main_window), "O arquivo só pôde ser aberto para leitura.");
+		showWarningMessage(GTK_WINDOW(main_window), _("O arquivo só pôde ser aberto para leitura."));
 
 	changes_until_last_save = 0;
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
@@ -730,9 +738,9 @@ static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 	atualiza_titulo_janela(nome_arquivo, ultimo_diretorio);
 
 	if (editavel)
-		pipoca_na_barra_de_estado("Arquivo", "Arquivo aberto.");
+		pipoca_na_barra_de_estado("Arquivo", _("Arquivo aberto."));
 	else
-		pipoca_na_barra_de_estado("Arquivo", "Arquivo aberto somente para leitura.");
+		pipoca_na_barra_de_estado("Arquivo", _("Arquivo aberto somente para leitura."));
 
 	return TRUE;
 }
@@ -754,7 +762,7 @@ static gboolean salvar_arquivo_como(const gchar *nome_arquivo, gpointer data)
 
 	if (!salvou)
 	{
-		showErrorMessage(GTK_WINDOW(main_window), "Não conseguiu salvar o arquivo!");
+		showErrorMessage(GTK_WINDOW(main_window), _("Não conseguiu salvar o arquivo!"));
 		return FALSE;
 	}
 
@@ -763,7 +771,7 @@ static gboolean salvar_arquivo_como(const gchar *nome_arquivo, gpointer data)
 
 	atualiza_titulo_janela(nome_arquivo, ultimo_diretorio);
 
-	pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
+	pipoca_na_barra_de_estado("Arquivo", _("Arquivo salvo."));
 
 	return TRUE;
 }
@@ -780,12 +788,12 @@ static gboolean salvar_arquivo(gpointer data)
 
 	if (!xchange_save(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
 	{
-		perror("Salvando");
-		showErrorMessage(GTK_WINDOW(main_window), "Erro ao salvar.\nExperimente \"salvar como\" ou \"como cópia\"\n");
+		perror(_("Salvando"));
+		showErrorMessage(GTK_WINDOW(main_window), _("Erro ao salvar.\nExperimente \"salvar como\" ou \"como cópia\"\n"));
 		return FALSE;
 	}
 
-	pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
+	pipoca_na_barra_de_estado("Arquivo", _("Arquivo salvo."));
 	changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
@@ -796,7 +804,7 @@ G_MODULE_EXPORT void on_action_salvar_copia_activate(GtkAction *action,
 		gpointer data)
 {
 	limpa_barra_de_estado("Arquivo");
-	GtkWidget * dialog = gtk_file_chooser_dialog_new("Salvar cópia...",
+	GtkWidget * dialog = gtk_file_chooser_dialog_new(_("Salvar cópia..."),
 			GTK_WINDOW(main_window), GTK_FILE_CHOOSER_ACTION_SAVE,
 			GTK_STOCK_SAVE, GTK_RESPONSE_OK, GTK_STOCK_CANCEL,
 			GTK_RESPONSE_CANCEL, NULL);
@@ -818,7 +826,7 @@ G_MODULE_EXPORT void on_action_salvar_copia_activate(GtkAction *action,
 		g_free(filename_decoded);
 
 		g_free(filename);
-		pipoca_na_barra_de_estado("Arquivo", "Cópia salva.");
+		pipoca_na_barra_de_estado("Arquivo", _("Cópia salva."));
 	}
 	gtk_widget_destroy(dialog);
 }
@@ -903,21 +911,21 @@ static gchar *usuario_escolhe_arquivo_tabela(gchar **encoding)
 	GtkFileFilter *filter[3];
 	filter[0] = gtk_file_filter_new ();
 	gtk_file_filter_add_pattern (filter[0], "*.tbl");
-	gtk_file_filter_set_name(filter[0], "Tabelas (*.tbl)");
+	gtk_file_filter_set_name(filter[0], _("Tabelas (*.tbl)"));
 	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter[0]);
 
 	filter[1] = gtk_file_filter_new ();
 	gtk_file_filter_add_mime_type(filter[1], "text/plain");
-	gtk_file_filter_set_name(filter[1], "Arquivos-texto");
+	gtk_file_filter_set_name(filter[1], _("Arquivos-texto"));
 	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter[1]);
 
 	filter[2] = gtk_file_filter_new ();
 	gtk_file_filter_add_pattern (filter[2], "*");
-	gtk_file_filter_set_name(filter[2], "Todos os arquivos");
+	gtk_file_filter_set_name(filter[2], _("Todos os arquivos"));
 	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter[2]);
 
 
-	gtk_window_set_title(GTK_WINDOW(dialog), "Carregar arquivo de tabela de caracteres");
+	gtk_window_set_title(GTK_WINDOW(dialog), _("Carregar arquivo de tabela de caracteres"));
 
 
 	gint result = gtk_dialog_run(GTK_DIALOG(dialog));
@@ -938,7 +946,7 @@ static gchar *usuario_escolhe_arquivo_tabela(gchar **encoding)
 			ultimo_diretorio = dirname;
 		}
 		else
-			pipoca_na_barra_de_estado("Arquivo", "Problema na identificação do diretório.");
+			pipoca_na_barra_de_estado("Arquivo", _("Problema na identificação do diretório."));
 
 	}
 	gtk_widget_hide(dialog);
@@ -959,7 +967,7 @@ static XChangeTable *carregar_tabela(const char *filename, const char *encoding)
 
 	if (xt == NULL)
 	{
-		gchar * msg = g_strdup_printf("Não conseguiu abrir o arquivo de codificação de caracteres!\n%s",filename);
+		gchar * msg = g_strdup_printf(_("Não conseguiu abrir o arquivo de codificação de caracteres!\n%s"),filename);
 		showErrorMessage(GTK_WINDOW(main_window), msg);
 		g_free(msg);
 		return NULL;
@@ -988,7 +996,7 @@ static void altera_padrao_codificacao_caracteres(char * encoding, gpointer data)
 		xchange_table_close(xt_tabela[0]);
 		xt_tabela[0] = xt_new;
 		on_radioaction_visao_codificao_padronizada_changed(NULL, GTK_RADIO_ACTION(radioaction_visao_codificao_padronizada), data);
-		gchar *rotulo = g_strdup_printf("Visão %s", encoding);
+		gchar *rotulo = g_strdup_printf(_("Visão %s"), encoding);
 		gtk_action_set_label(radioaction_visao_codificao_padronizada, rotulo);
 		g_free(rotulo);
 		gtk_action_set_short_label(radioaction_visao_codificao_padronizada, encoding);
@@ -1003,12 +1011,12 @@ static void altera_padrao_codificacao_caracteres(char * encoding, gpointer data)
 	{
 		if (encoding != NULL)
 		{
-			gchar *tmp = g_strdup_printf("Não foi possível usar esta codificação: %s", encoding);
+			gchar *tmp = g_strdup_printf(_("Não foi possível usar esta codificação: %s"), encoding);
 			pipoca_na_barra_de_estado("Codificação de caracteres", tmp);
 			g_free(tmp);
 		}
 		else
-			pipoca_na_barra_de_estado("Codificação de caracteres", "Não é possível detectar automaticamente uma codificação para esse fim.");
+			pipoca_na_barra_de_estado("Codificação de caracteres", _("Não é possível detectar automaticamente uma codificação para esse fim."));
 	}
 }
 
@@ -1114,9 +1122,9 @@ void on_action_carregar_tabela_activate(GtkAction *action, gpointer data)
 		gchar *nome_base_arquivo = g_path_get_basename(filename);
 		gchar *rotulo = NULL;
 		if (nome_base_arquivo == NULL)
-			rotulo = g_strdup("Visão tabela 1");
+			rotulo = g_strdup(_("Visão tabela 1"));
 		else
-			rotulo = g_strdup_printf("Visão tabela 1 (%s)", nome_base_arquivo);
+			rotulo = g_strdup_printf(_("Visão tabela 1 (%s)"), nome_base_arquivo);
 		gtk_action_set_label(radioaction_visao_tabela1, rotulo);
 		g_free(nome_base_arquivo);
 		g_free(rotulo);
@@ -1144,9 +1152,9 @@ void on_action_carregar_tabela2_activate(GtkAction *action, gpointer data)
 		gchar *nome_base_arquivo = g_path_get_basename(filename);
 		gchar *rotulo = NULL;
 		if (nome_base_arquivo == NULL)
-			rotulo = g_strdup("Visão tabela 2");
+			rotulo = g_strdup(_("Visão tabela 2"));
 		else
-			rotulo = g_strdup_printf("Visão tabela 2 (%s)", nome_base_arquivo);
+			rotulo = g_strdup_printf(_("Visão tabela 2 (%s)"), nome_base_arquivo);
 		gtk_action_set_label(radioaction_visao_tabela2, rotulo);
 		g_free(nome_base_arquivo);
 		g_free(rotulo);
@@ -1196,9 +1204,9 @@ static void tenta_ir_para(const char *texto)
 	valor =	converte_texto_em_posicao(texto);
 
 	if (valor == (off_t) -1)
-		pipoca_na_barra_de_estado("Localizar", "Não há endereço para onde ir.");
+		pipoca_na_barra_de_estado("Localizar", _("Não há endereço para onde ir."));
 	else if (valor == (off_t) -2)
-		pipoca_na_barra_de_estado("Localizar", "Não conseguiu entender o endereço.");
+		pipoca_na_barra_de_estado("Localizar", _("Não conseguiu entender o endereço."));
 	else
 	{
 		size_t filesize = xchange_hex_view_get_file_size(XCHANGE_HEX_VIEW(hexv));
@@ -1211,12 +1219,12 @@ static void tenta_ir_para(const char *texto)
 			off_t cursor = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
 			if (filesize && cursor < filesize -1)
 			{
-				if (showYesNoDialog(GTK_WINDOW(main_window), "O destino está além do fim do arquivo.\nDeseja ir ao fim do arquivo?") != GTK_RESPONSE_YES)
+				if (showYesNoDialog(GTK_WINDOW(main_window), _("O destino está além do fim do arquivo.\nDeseja ir ao fim do arquivo?")) != GTK_RESPONSE_YES)
 					return;
 			}
 			else
 			{
-				showErrorMessage(GTK_WINDOW(main_window), "O destino está além do fim do arquivo.");
+				showErrorMessage(GTK_WINDOW(main_window), _("O destino está além do fim do arquivo."));
 				return;
 			}
 		}
@@ -1356,7 +1364,7 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 			{
 				if (tamanho_selecao < tamanho_bytes)
 				{
-					gint resposta = showYesNoCancelDialog(GTK_WINDOW(main_window), "A seleção é menor que a quantidade de bytes a substituir.\nDeseja acrescentar os bytes em excesso?");
+					gint resposta = showYesNoCancelDialog(GTK_WINDOW(main_window), _("A seleção é menor que a quantidade de bytes a substituir.\nDeseja acrescentar os bytes em excesso?"));
 					if (resposta == GTK_RESPONSE_NO)
 					{
 						if (!xchange_hex_view_replace_bytes(XCHANGE_HEX_VIEW(hexv), bytes, offset_inicio, tamanho_selecao))
@@ -1467,7 +1475,7 @@ static struct DadosLocalizar * obtem_parametros_localizar()
 			entry_valor_a_localizar));
 	if (texto == NULL)
 	{
-		pipoca_na_barra_de_estado("Localização", "Não conseguiu obter texto a localizar.");
+		pipoca_na_barra_de_estado("Localização", _("Não conseguiu obter texto a localizar."));
 		free(parametrosLocalizar);
 		return NULL;
 	}
@@ -1475,7 +1483,7 @@ static struct DadosLocalizar * obtem_parametros_localizar()
 	gint tamanho_texto = strlen(texto);
 	if (tamanho_texto == 0)
 	{
-		pipoca_na_barra_de_estado("Localização", "Sem conteúdo para localizar.");
+		pipoca_na_barra_de_estado("Localização", _("Sem conteúdo para localizar."));
 		free(parametrosLocalizar);
 		return NULL;
 	}
@@ -1495,7 +1503,7 @@ static struct DadosLocalizar * obtem_parametros_localizar()
 	}
 	if (bytes_chave == NULL)
 	{
-		pipoca_na_barra_de_estado("Localização", "Não conseguiu interpretar o texto a localizar.");
+		pipoca_na_barra_de_estado("Localização", _("Não conseguiu interpretar o texto a localizar."));
 		free(parametrosLocalizar);
 		return NULL;
 	}
@@ -1631,14 +1639,14 @@ static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes,
 	if (tamanho <= 0)
 	{
 		gdk_window_beep(gtk_widget_get_window(main_window));
-		pipoca_na_barra_de_estado(contexto, "Não conseguiu converter o texto em bytes através da tabela!");
+		pipoca_na_barra_de_estado(contexto, _("Não conseguiu converter o texto em bytes através da tabela!"));
 		return NULL;
 	}
 	bytes_chave = malloc(tamanho);
 	if (bytes_chave == NULL)
 	{
 		gdk_window_beep(gtk_widget_get_window(main_window));
-		pipoca_na_barra_de_estado(contexto, "Problema na alocação de memória!");
+		pipoca_na_barra_de_estado(contexto, _("Problema na alocação de memória!"));
 		return NULL;
 	}
 	xchange_table_scan_stringUTF8(xt, texto, tamanho_texto, bytes_chave);
@@ -1668,7 +1676,7 @@ static uint8_t *recupera_bytes_de_texto_hexa(const gchar *texto, int *tamanho_by
 	{
 		gdk_window_beep(gtk_widget_get_window(main_window));
 		if (contexto != NULL)
-			pipoca_na_barra_de_estado(contexto, "Problema na alocação de memória!");
+			pipoca_na_barra_de_estado(contexto, _("Problema na alocação de memória!"));
 		return NULL;
 	}
 
@@ -1712,7 +1720,7 @@ static uint8_t *recupera_bytes_de_texto_hexa(const gchar *texto, int *tamanho_by
 		g_free(bytes_chave);
 		gdk_window_beep(gtk_widget_get_window(main_window));
 		if (contexto != NULL)
-			pipoca_na_barra_de_estado(contexto, "Não conseguiu converter o texto em bytes!");
+			pipoca_na_barra_de_estado(contexto, _("Não conseguiu converter o texto em bytes!"));
 		return NULL;
 	}
 
@@ -1758,12 +1766,12 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 				// Se o fim da busca é o fim do arquivo
 				if (localizar->fim == 0 || localizar->fim >= xchange_get_size(xf)-1)
 				{
-					if (showYesNoDialog(GTK_WINDOW(main_window), "A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?") == GTK_RESPONSE_YES)
+					if (showYesNoDialog(GTK_WINDOW(main_window), _("A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?")) == GTK_RESPONSE_YES)
 						achou = xchange_find(xf, 0, 0, bytes_chave, tamanho_bytes);
 				}
 				else
 				{
-					if (showYesNoDialog(GTK_WINDOW(main_window), "A busca alcançou o fim do intervalo e não localizou a sequência.\nDeseja buscar a partir do início do intervalo?") == GTK_RESPONSE_YES)
+					if (showYesNoDialog(GTK_WINDOW(main_window), _("A busca alcançou o fim do intervalo e não localizou a sequência.\nDeseja buscar a partir do início do intervalo?")) == GTK_RESPONSE_YES)
 						achou = xchange_find(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
 				}
 			}
@@ -1776,12 +1784,12 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 			{
 				if (localizar->inicio == 0 && (localizar->fim == 0 || localizar->fim == xchange_get_size(xf) -1))
 				{
-					if (showYesNoDialog(GTK_WINDOW(main_window), "A busca alcançou o começo do arquivo e não localizou a sequência.\nDeseja buscar a partir do fim do arquivo?") == GTK_RESPONSE_YES)
+					if (showYesNoDialog(GTK_WINDOW(main_window), _("A busca alcançou o começo do arquivo e não localizou a sequência.\nDeseja buscar a partir do fim do arquivo?")) == GTK_RESPONSE_YES)
 						achou = xchange_find_backwards(xf, 0, xchange_get_size(xf) - 1, bytes_chave, tamanho_bytes);
 				}
 				else
 				{
-					if (showYesNoDialog(GTK_WINDOW(main_window), "A busca alcançou o começo do intervalo e não localizou a sequência.\nDeseja buscar a partir do fim do intervalo?") == GTK_RESPONSE_YES)
+					if (showYesNoDialog(GTK_WINDOW(main_window), _("A busca alcançou o começo do intervalo e não localizou a sequência.\nDeseja buscar a partir do fim do intervalo?")) == GTK_RESPONSE_YES)
 						achou = xchange_find_backwards(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
 				}
 			}
@@ -1791,7 +1799,7 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 	if (achou == (off_t) -1)
 	{
 		gdk_window_beep(gtk_widget_get_window(main_window));
-		pipoca_na_barra_de_estado("Localização", "Não encontrado!");
+		pipoca_na_barra_de_estado("Localização", _("Não encontrado!"));
 		return FALSE;
 	}
 
@@ -2079,9 +2087,9 @@ G_MODULE_EXPORT
 void on_checkbutton_localizar_para_tras_toggled(GtkCheckButton *checkbutton, gpointer data)
 {
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(checkbutton)))
-		gtk_button_set_label(GTK_BUTTON(radiobutton_localizar_do_inicio), "Desde o fim");
+		gtk_button_set_label(GTK_BUTTON(radiobutton_localizar_do_inicio), _("Desde o fim"));
 	else
-		gtk_button_set_label(GTK_BUTTON(radiobutton_localizar_do_inicio), "Desde o início");
+		gtk_button_set_label(GTK_BUTTON(radiobutton_localizar_do_inicio), _("Desde o início"));
 }
 
 G_MODULE_EXPORT
@@ -2108,7 +2116,7 @@ void on_action_substituir_activate(GtkAction *action, gpointer data)
 	{
 		if (!verifica_validade_sequencia_bytes())
 		{
-			showErrorMessage(GTK_WINDOW(main_window), "Sequência de bytes inválida!");
+			showErrorMessage(GTK_WINDOW(main_window), _("Sequência de bytes inválida!"));
 			destroi_dados_localizar(parametrosLocalizar);
 			g_free(parametrosLocalizar);
 			return;
@@ -2122,7 +2130,7 @@ void on_action_substituir_activate(GtkAction *action, gpointer data)
 	{
 		if (!verifica_validade_sequencia_caracteres())
 		{
-			showErrorMessage(GTK_WINDOW(main_window), "Sequência de caracteres inválida!");
+			showErrorMessage(GTK_WINDOW(main_window), _("Sequência de caracteres inválida!"));
 			destroi_dados_localizar(parametrosLocalizar);
 			g_free(parametrosLocalizar);
 			return;
@@ -2261,9 +2269,9 @@ gint on_spinbutton_cursor_input(GtkSpinButton *spinbutton, gpointer arg1, gpoint
 	off_t valor;
 	valor =	converte_texto_em_posicao(texto);
 	if (valor == (off_t) -1)
-		pipoca_na_barra_de_estado("Localizar", "Não há endereço para onde ir.");
+		pipoca_na_barra_de_estado("Localizar", _("Não há endereço para onde ir."));
 	else if (valor == (off_t) -2)
-		pipoca_na_barra_de_estado("Localizar", "Não conseguiu entender o endereço.");
+		pipoca_na_barra_de_estado("Localizar", _("Não conseguiu entender o endereço."));
 	if (arg1 != NULL)
 		*(gdouble*)arg1 = valor;
 	return valor;
@@ -2306,7 +2314,7 @@ static void mudou_selecao(XChangeHexView *hexv, gpointer data)
 
 	if (xchange_hex_view_get_selection_bounds(hexv, &inicio, &fim))
 	{
-		gchar *texto = g_strdup_printf("Seleção de x%1$08lX a x%2$08lX (%3$lu / x%3$lX bytes)", inicio, fim, fim-inicio+1);
+		gchar *texto = g_strdup_printf(_("Seleção de x%1$08lX a x%2$08lX (%3$lu / x%3$lX bytes)"), inicio, fim, fim-inicio+1);
 		pipoca_na_barra_de_estado("Seleção", texto);
 		g_free(texto);
 	}
@@ -2343,6 +2351,6 @@ G_MODULE_EXPORT
 void on_action_abre_preferencias_activate(GtkAction *action, gpointer data)
 {
 	if (!abrir_dialogo_preferencias(&preferencias))
-		showErrorMessage(GTK_WINDOW(main_window), "Não conseguiu abrir a janela de preferências.");
+		showErrorMessage(GTK_WINDOW(main_window), _("Não conseguiu abrir a janela de preferências."));
 }
 

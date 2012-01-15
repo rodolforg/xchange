@@ -1860,7 +1860,7 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">Asterisco indica que o arquivo tem modificações não salvas</property>
-                    <property name="label" translatable="yes"> </property>
+                    <property name="label"> </property>
                   </object>
                   <packing>
                     <property name="expand">True</property>

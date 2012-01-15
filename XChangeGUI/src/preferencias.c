@@ -9,6 +9,8 @@
 #include "hexview.h"
 #include "main.h"
 
+#include <glib/gi18n.h>
+
 struct Janelas
 {
 	GtkWidget *hexv;
@@ -108,7 +110,7 @@ gboolean carrega_arquivo_preferencias(XChangeHexView *hexv, Preferencias *prefer
 	GKeyFile * keyfile = g_key_file_new();
 	if (keyfile == NULL)
 	{
-		pipoca_na_barra_de_estado("Preferências", "Não foi possível carregar preferências");
+		pipoca_na_barra_de_estado("Preferências", _("Não foi possível carregar preferências"));
 		return FALSE;
 	}
 	GError *erro = NULL;
@@ -138,7 +140,7 @@ static void ler_preferencia_booleano(GKeyFile *keyfile, const gchar *grupo, cons
 	{
 		if (erro->code != G_KEY_FILE_ERROR_GROUP_NOT_FOUND)
 		{
-			g_warning("Erro ao ler as preferências: %s\n", erro->message);
+			g_warning(_("Erro ao ler as preferências: %s\n"), erro->message);
 		}
 		g_error_free(erro);
 		erro = NULL;
@@ -154,7 +156,7 @@ static void ler_preferencia_inteiro(GKeyFile *keyfile, const gchar *grupo, const
 	{
 		if (erro->code != G_KEY_FILE_ERROR_GROUP_NOT_FOUND)
 		{
-			g_warning("Erro ao ler as preferências: %s\n", erro->message);
+			g_warning(_("Erro ao ler as preferências: %s\n"), erro->message);
 		}
 		g_error_free(erro);
 		erro = NULL;
@@ -171,7 +173,7 @@ static void ler_preferencia_texto(GKeyFile *keyfile, const gchar *grupo, const c
 	{
 		if (erro->code != G_KEY_FILE_ERROR_GROUP_NOT_FOUND)
 		{
-			g_warning("Erro ao ler as preferências: %s\n", erro->message);
+			g_warning(_("Erro ao ler as preferências: %s\n"), erro->message);
 		}
 		g_error_free(erro);
 		erro = NULL;
@@ -207,7 +209,7 @@ static void ler_preferencia_cor(GKeyFile *keyfile, const gchar *grupo, const cha
 	{
 		if (erro->code != G_KEY_FILE_ERROR_GROUP_NOT_FOUND)
 		{
-			g_warning("Erro ao ler as preferências: %s\n", erro->message);
+			g_warning(_("Erro ao ler as preferências: %s\n"), erro->message);
 		}
 		g_error_free(erro);
 		erro = NULL;
@@ -226,7 +228,7 @@ static void ler_preferencia_lista_inteiros(GKeyFile *keyfile, const gchar *grupo
 	{
 		if (erro->code != G_KEY_FILE_ERROR_GROUP_NOT_FOUND)
 		{
-			g_warning("Erro ao ler as preferências: %s\n", erro->message);
+			g_warning(_("Erro ao ler as preferências: %s\n"), erro->message);
 		}
 		g_error_free(erro);
 		erro = NULL;
@@ -904,7 +906,7 @@ void on_comboboxentry_seletor_codificacao_caracteres_preferencial_changed(GtkCom
 		codificacao = gtk_combo_box_get_active_text(combobox);
 #endif
 	}
-	if (codificacao!= NULL && (g_utf8_strlen(codificacao, -1) == 0 || g_strcmp0(codificacao, "Padrão do sistema") == 0))
+	if (codificacao!= NULL && (g_utf8_strlen(codificacao, -1) == 0 || g_strcmp0(codificacao, _("Padrão do sistema")) == 0))
 	{
 		g_free(codificacao);
 		codificacao = NULL;

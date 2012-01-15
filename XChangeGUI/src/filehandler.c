@@ -22,13 +22,13 @@ Filehandler *filehandler_new(FilehandlerCallbacks *callbacks, GtkWidget *main_wi
 	if (fh == NULL)
 		return NULL;
 	fh->file_changes_saved = TRUE;
-	
+
 	if (callbacks != NULL)
 		fh->callbacks = *callbacks;
-	
+
 	fh->main_window = main_window;
 	fh->user_data = user_data;
-	
+
 	return fh;
 }
 
@@ -48,7 +48,7 @@ void filehandler_destroy(Filehandler *fh)
 ///////////////////////////////////
 
 // The default name for new files
-static gchar * const FILENAME_NOT_SAVED=N_("");
+static gchar * const FILENAME_NOT_SAVED="";
 
 // Checks if there are no opened files
 #define IS_CLOSED(fh) (fh->current_filename == NULL)
@@ -92,7 +92,7 @@ void filehandler_update_action_status(const Filehandler *fh)
 {
 	if (fh == NULL)
 		return;
-	
+
 	if (fh->actions.save != NULL)
 		gtk_action_set_sensitive(fh->actions.save, (!IS_CLOSED(fh)) && !fh->file_changes_saved);
 	if (fh->actions.save_as != NULL)
@@ -116,7 +116,7 @@ void filehandler_on_action_new_activate(GtkAction *action, gpointer data)
 
 	if (fh->callbacks.new == NULL)
 	{
-		showWarningMessage(GTK_WINDOW(fh->main_window), _("You may not create a new file."));
+		showWarningMessage(GTK_WINDOW(fh->main_window), _("You aren't allowed tocreate a new file."));
 		return;
 	}
 
@@ -127,7 +127,7 @@ void filehandler_on_action_new_activate(GtkAction *action, gpointer data)
 
 	fh->current_filename = FILENAME_NOT_SAVED;
 	fh->file_changes_saved = TRUE;
-	
+
 	if (fh->actions.save != NULL)
 		gtk_action_set_sensitive(fh->actions.save, TRUE);
 	if (fh->actions.save_as != NULL)
@@ -175,9 +175,9 @@ void filehandler_on_action_open_activate (GtkAction *action, gpointer data)
 {
 	if (data == NULL)
 		return;
-		
+
 	Filehandler *fh = data;
-	
+
 	GtkWidget * dialog = gtk_file_chooser_dialog_new(_("Open file..."),
 			GTK_WINDOW(fh->main_window), GTK_FILE_CHOOSER_ACTION_OPEN,
 			GTK_STOCK_OPEN, GTK_RESPONSE_OK, GTK_STOCK_CANCEL,
@@ -194,11 +194,11 @@ void filehandler_on_action_open_activate (GtkAction *action, gpointer data)
 		gtk_widget_destroy(dialog);
 		return;
 	}
-	
+
 	gchar *filename;
 	filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 	gtk_widget_destroy(dialog);
-	
+
 	if (!try_close_file(fh))
 		return;
 
@@ -229,7 +229,7 @@ static gboolean do_save_file(Filehandler *fh)
 {
 	if (fh->callbacks.save == NULL)
 	{
-		showWarningMessage(GTK_WINDOW(fh->main_window), _("You may not save a file."));
+		showWarningMessage(GTK_WINDOW(fh->main_window), _("You aren't allowed tosave a file."));
 		return FALSE;
 	}
 
@@ -242,7 +242,7 @@ static gboolean do_save_file(Filehandler *fh)
 	fh->file_changes_saved = TRUE;
 	if (fh->actions.save != NULL)
 		gtk_action_set_sensitive(fh->actions.save, FALSE);
-	
+
 	return TRUE;
 }
 
@@ -250,10 +250,10 @@ static gboolean do_save_as_file(Filehandler *fh)
 {
 	if (fh->callbacks.save_as == NULL)
 	{
-		showWarningMessage(GTK_WINDOW(fh->main_window), _("You may not save as another file."));
+		showWarningMessage(GTK_WINDOW(fh->main_window), _("You aren't allowed tosave as another file."));
 		return FALSE;
 	}
-	
+
 	// Let user choose the file name
 	GtkWidget * dialog = gtk_file_chooser_dialog_new(_("Save as..."),
 			GTK_WINDOW(fh->main_window),
@@ -297,25 +297,25 @@ static gboolean do_save_as_file(Filehandler *fh)
 		g_free(filename);
 		return FALSE;
 	}
-	
+
 	// Update current file name and current directory
 	if (is_file_named(fh))
 		g_free(fh->current_filename);
 	fh->current_filename = filename;
-	
+
 	g_free(fh->last_dir);
 	fh->last_dir = g_path_get_dirname(fh->current_filename);
-	
+
 	// Add to recent files list
 	if (fh->callbacks.include_in_recents != NULL)
 		fh->callbacks.include_in_recents(fh->current_filename, fh->user_data);
-	
+
 	// Update status
 	fh->file_changes_saved = TRUE;
 
 	if (fh->actions.save != NULL)
 		gtk_action_set_sensitive(fh->actions.save, FALSE);
-	
+
 	return TRUE;
 }
 
@@ -324,10 +324,10 @@ void filehandler_on_action_save_as_activate(GtkAction *action, gpointer data)
 {
 	if (data == NULL)
 		return;
-		
+
 	Filehandler *fh = data;
 
-	// Is there a file to save?	
+	// Is there a file to save?
 	if (IS_CLOSED(fh))
 		return;
 
@@ -340,7 +340,7 @@ void filehandler_on_action_save_activate(GtkAction *action, gpointer data)
 {
 	if (data == NULL)
 		return;
-		
+
 	Filehandler *fh = data;
 
 	// If it's a new file, make user choose its name
@@ -349,7 +349,7 @@ void filehandler_on_action_save_activate(GtkAction *action, gpointer data)
 		filehandler_on_action_save_as_activate(action, data);
 		return;
 	}
-	
+
 	do_save_file(fh);
 }
 
@@ -365,7 +365,7 @@ gboolean filehandler_save_file (Filehandler *fh)
 		return FALSE;
 	if (!is_file_named(fh))
 		return FALSE;
-	
+
 	do_save_file(fh);
 
 	return TRUE;
@@ -381,7 +381,7 @@ void filehandler_on_action_close_activate(GtkAction *action, gpointer data)
 {
 	if (data == NULL)
 		return;
-		
+
 	Filehandler *fh = data;
 	try_close_file(fh);
 }
@@ -394,7 +394,7 @@ static void do_close_file(Filehandler *fh)
 	if (is_file_named(fh))
 		g_free(fh->current_filename);
 	fh->current_filename = NULL;
-	
+
 	fh->file_changes_saved = TRUE;
 	if (fh->actions.save != NULL)
 		gtk_action_set_sensitive(fh->actions.save, FALSE);
@@ -417,7 +417,7 @@ static gboolean try_close_file(Filehandler *fh)
 			save_func = do_save_file;
 		else if (fh->callbacks.save_as != NULL)
 			save_func = do_save_as_file;
-		
+
 		if (save_func != NULL)
 		{
 			gint result = showYesNoCancelDialog(GTK_WINDOW(fh->main_window),
@@ -440,7 +440,7 @@ static gboolean try_close_file(Filehandler *fh)
 }
 
 ///////////////////////////////////
-// Exit 
+// Exit
 ///////////////////////////////////
 
 static void exit_program(Filehandler *fh)
@@ -455,9 +455,9 @@ gboolean filehandler_on_main_window_delete_event(GtkWidget *widget,
 {
 	if (data == NULL)
 		return FALSE;
-		
+
 	Filehandler *fh = data;
-	
+
 	if (try_close_file(fh))
 	{
 		exit_program(fh);
@@ -472,9 +472,9 @@ void filehandler_on_action_quit_activate(GtkAction *action, gpointer data)
 {
 	if (data == NULL)
 		return;
-		
+
 	Filehandler *fh = data;
-	
+
 	if (try_close_file(fh))
 		exit_program(fh);
 }

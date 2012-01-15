@@ -14,6 +14,9 @@
 #include <string.h> // For Miniedition...
 #include <stdlib.h>
 
+#define GETTEXT_PACKAGE "libxchange-gtk"
+#include <glib/gi18n-lib.h>
+
 #define MARGIN_OFFSET_TEXT 3
 #define LINE_SPACEMENT 5
 #define TEXT_SPACEMENT 10
@@ -2216,7 +2219,7 @@ static void miniedition_convert_text_bytes_(GtkTextBuffer *text_buffer, gpointer
 		gtk_label_set_text(label_bytes, "");
 	}
 	else
-		gtk_label_set_markup(label_bytes, "<b>Erro na conversão</b>: caracteres desconhecidos?\nConserte ou pressione ESC para cancelar");
+		gtk_label_set_markup(label_bytes, _("<b>Erro na conversão</b>: caracteres desconhecidos?\nConserte ou pressione ESC para cancelar"));
 
 	// Escreve quantidade de bytes...
 	// Calcula comprimento da seleção, se houver
@@ -2247,7 +2250,7 @@ static void miniedition_convert_text_bytes_(GtkTextBuffer *text_buffer, gpointer
 		}
 	}
 
-	gchar *formatacao_qtd = g_strdup_printf("<small><small>%s%d bytes%s</small></small>", formatacao_extra_qtd_abre, tamanho_bytes >=0? tamanho_bytes : 0, formatacao_extra_qtd_fecha);
+	gchar *formatacao_qtd = g_strdup_printf(_("<small><small>%s%d bytes%s</small></small>"), formatacao_extra_qtd_abre, tamanho_bytes >=0? tamanho_bytes : 0, formatacao_extra_qtd_fecha);
 
 	GtkLabel *label_bytes_length = mew->label_bytes_length;
 	gtk_label_set_markup (label_bytes_length, formatacao_qtd);
@@ -2287,7 +2290,7 @@ static gboolean miniedition_create(XChangeHexView* hexv)
 	if (miniwindow == NULL)
 		return FALSE;
 	gtk_window_set_decorated(GTK_WINDOW(miniwindow), FALSE);
-	gtk_window_set_title(GTK_WINDOW(miniwindow), "heXchange typer");
+	gtk_window_set_title(GTK_WINDOW(miniwindow), _("heXchange typer"));
 	gtk_window_set_skip_taskbar_hint(GTK_WINDOW(miniwindow), TRUE);
 	gtk_window_set_skip_pager_hint(GTK_WINDOW(miniwindow), TRUE);
 	gtk_window_move(GTK_WINDOW(miniwindow), par_x+hexv_x + p.x, par_y+hexv_y + p.y + hexv->font_size + 1);
