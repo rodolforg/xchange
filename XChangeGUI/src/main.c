@@ -1885,7 +1885,11 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 	return TRUE;
 }
 
+G_MODULE_EXPORT
+void on_action_localizar_proximo_activate(GtkAction *action, gpointer data);
 
+G_MODULE_EXPORT
+void on_action_localizar_anterior_activate(GtkAction *action, gpointer data);
 
 G_MODULE_EXPORT
 void on_action_localizar_activate(GtkAction *action, gpointer data)
