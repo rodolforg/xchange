@@ -526,6 +526,7 @@ int main(int argc, char *argv[])
 	if (!mostra_janela(fh))
 	{
 		showErrorMessage(NULL, "Não foi possível carregar a interface.");
+		filehandler_destroy(fh);
 		exit(EXIT_FAILURE);
 	}
 
@@ -539,6 +540,7 @@ int main(int argc, char *argv[])
 	if (xt_tabela == NULL)
 	{
 		perror("Alocando espaço para tabelas");
+		filehandler_destroy(fh);
 		destroi_preferencias(&preferencias);
 		exit(EXIT_FAILURE);
 	}
