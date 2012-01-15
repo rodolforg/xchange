@@ -3,162 +3,162 @@
   <requires lib="gtk+" version="2.16"/>
   <!-- interface-naming-policy project-wide -->
   <object class="GtkAction" id="action_abre_preferencias">
-    <property name="label">Preferências</property>
-    <property name="short_label">Preferências</property>
-    <property name="tooltip">Edite as preferências do heXchange</property>
+    <property name="label" translatable="yes">Preferências</property>
+    <property name="short_label" translatable="yes">Preferências</property>
+    <property name="tooltip" translatable="yes">Edite as preferências do heXchange</property>
     <property name="stock_id">gtk-preferences</property>
     <signal name="activate" handler="on_action_abre_preferencias_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_abrir">
-    <property name="label">Abrir</property>
-    <property name="short_label">Abrir</property>
+    <property name="label" translatable="yes">Abrir</property>
+    <property name="short_label" translatable="yes">Abrir</property>
     <property name="stock_id">gtk-open</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_abrir_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_abrir_janela_localizar">
-    <property name="label">Localizar...</property>
-    <property name="short_label">Localizar...</property>
+    <property name="label" translatable="yes">Localizar...</property>
+    <property name="short_label" translatable="yes">Localizar...</property>
     <property name="stock_id">gtk-find</property>
     <signal name="activate" handler="on_action_abrir_janela_localizar_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_alternar_codificacao">
-    <property name="label">Alternar codificação</property>
-    <property name="short_label">Alternar</property>
-    <property name="tooltip">Muda para a próxima tabela carregada.</property>
+    <property name="label" translatable="yes">Alternar codificação</property>
+    <property name="short_label" translatable="yes">Alternar</property>
+    <property name="tooltip" translatable="yes">Muda para a próxima tabela carregada.</property>
     <signal name="activate" handler="on_action_alternar_codificacao_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_carregar_tabela">
-    <property name="label">Carregar tabela</property>
-    <property name="short_label">Tabela</property>
-    <property name="tooltip">Utiliza um arquivo contendo a associação de caracteres</property>
+    <property name="label" translatable="yes">Carregar tabela</property>
+    <property name="short_label" translatable="yes">Tabela</property>
+    <property name="tooltip" translatable="yes">Utiliza um arquivo contendo a associação de caracteres</property>
     <signal name="activate" handler="on_action_carregar_tabela_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_carregar_tabela2">
-    <property name="label">Carregar tabela secundária</property>
-    <property name="short_label">Tabela secundária</property>
+    <property name="label" translatable="yes">Carregar tabela secundária</property>
+    <property name="short_label" translatable="yes">Tabela secundária</property>
     <signal name="activate" handler="on_action_carregar_tabela2_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_colar">
-    <property name="label">Colar</property>
-    <property name="short_label">Colar</property>
+    <property name="label" translatable="yes">Colar</property>
+    <property name="short_label" translatable="yes">Colar</property>
     <property name="stock_id">gtk-paste</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_colar_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_copiar">
-    <property name="label">Copiar...</property>
-    <property name="short_label">Copiar...</property>
+    <property name="label" translatable="yes">Copiar...</property>
+    <property name="short_label" translatable="yes">Copiar...</property>
     <property name="stock_id">gtk-copy</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_copiar_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_copiar_texto">
-    <property name="label">Copiar texto</property>
+    <property name="label" translatable="yes">Copiar texto</property>
     <property name="stock_id">gtk-copy</property>
     <signal name="activate" handler="on_action_copiar_texto_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_escolher_codificacao">
-    <property name="label">Outra codificação...</property>
-    <property name="short_label">Outra...</property>
-    <property name="tooltip">Permite escolher outra codificação de caracteres</property>
+    <property name="label" translatable="yes">Outra codificação...</property>
+    <property name="short_label" translatable="yes">Outra...</property>
+    <property name="tooltip" translatable="yes">Permite escolher outra codificação de caracteres</property>
     <property name="stock_id">gtk-dialog-question</property>
     <signal name="activate" handler="on_action_escolher_codificacao_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_fechar_arquivo">
-    <property name="label">Fechar</property>
-    <property name="short_label">Fechar</property>
+    <property name="label" translatable="yes">Fechar</property>
+    <property name="short_label" translatable="yes">Fechar</property>
     <property name="stock_id">gtk-close</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_fechar_arquivo_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_ir_para">
-    <property name="label">Ir para endereço...</property>
-    <property name="short_label">Ir para...</property>
+    <property name="label" translatable="yes">Ir para endereço...</property>
+    <property name="short_label" translatable="yes">Ir para...</property>
     <property name="stock_id">gtk-jump-to</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_ir_para_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_localizar">
-    <property name="label">Localizar próximo...</property>
-    <property name="short_label">Localizar próximo...</property>
+    <property name="label" translatable="yes">Localizar próximo...</property>
+    <property name="short_label" translatable="yes">Localizar próximo...</property>
     <property name="stock_id">gtk-find</property>
     <signal name="activate" handler="on_action_localizar_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_localizar_anterior">
-    <property name="label">Localizar anterior...</property>
-    <property name="short_label">Anterior...</property>
+    <property name="label" translatable="yes">Localizar anterior...</property>
+    <property name="short_label" translatable="yes">Anterior...</property>
     <property name="stock_id">gtk-media-previous</property>
     <signal name="activate" handler="on_action_localizar_anterior_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_localizar_proximo">
-    <property name="label">Localizar próximo...</property>
-    <property name="short_label">Próximo...</property>
+    <property name="label" translatable="yes">Localizar próximo...</property>
+    <property name="short_label" translatable="yes">Próximo...</property>
     <property name="stock_id">gtk-media-next</property>
     <signal name="activate" handler="on_action_localizar_proximo_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_novo_arquivo">
-    <property name="label">Novo</property>
-    <property name="short_label">Novo</property>
+    <property name="label" translatable="yes">Novo</property>
+    <property name="short_label" translatable="yes">Novo</property>
     <property name="stock_id">gtk-new</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_novo_arquivo_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_recortar">
-    <property name="label">Recortar</property>
-    <property name="short_label">Recortar</property>
+    <property name="label" translatable="yes">Recortar</property>
+    <property name="short_label" translatable="yes">Recortar</property>
     <property name="stock_id">gtk-cut</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_recortar_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_redo">
-    <property name="label">Refazer</property>
-    <property name="short_label">Refazer</property>
-    <property name="tooltip">Refaz a última ação desfeita</property>
+    <property name="label" translatable="yes">Refazer</property>
+    <property name="short_label" translatable="yes">Refazer</property>
+    <property name="tooltip" translatable="yes">Refaz a última ação desfeita</property>
     <property name="stock_id">gtk-redo</property>
     <property name="sensitive">False</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_redo_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_sair">
-    <property name="label">Sair</property>
-    <property name="short_label">Sair</property>
+    <property name="label" translatable="yes">Sair</property>
+    <property name="short_label" translatable="yes">Sair</property>
     <property name="stock_id">gtk-quit</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_sair_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_salvar">
-    <property name="label">Salvar</property>
-    <property name="short_label">Salvar</property>
+    <property name="label" translatable="yes">Salvar</property>
+    <property name="short_label" translatable="yes">Salvar</property>
     <property name="stock_id">gtk-save</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_salvar_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_salvar_como">
-    <property name="label">Salvar como</property>
-    <property name="short_label">Salvar como</property>
+    <property name="label" translatable="yes">Salvar como</property>
+    <property name="short_label" translatable="yes">Salvar como</property>
     <property name="stock_id">gtk-save-as</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_salvar_como_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_salvar_copia">
-    <property name="label">Salvar cópia...</property>
-    <property name="short_label">Salvar cópia...</property>
+    <property name="label" translatable="yes">Salvar cópia...</property>
+    <property name="short_label" translatable="yes">Salvar cópia...</property>
     <property name="stock_id">gtk-save-as</property>
     <signal name="activate" handler="on_action_salvar_copia_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_sobre">
-    <property name="label">Sobre</property>
-    <property name="short_label">Sobre</property>
-    <property name="tooltip">Informações sobre o programa</property>
+    <property name="label" translatable="yes">Sobre</property>
+    <property name="short_label" translatable="yes">Sobre</property>
+    <property name="tooltip" translatable="yes">Informações sobre o programa</property>
     <property name="stock_id">gtk-about</property>
     <property name="always_show_image">True</property>
     <signal name="activate" handler="on_action_sobre_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="action_undo">
-    <property name="label">Desfazer</property>
-    <property name="short_label">Desfazer</property>
-    <property name="tooltip">Desfaz a última ação</property>
+    <property name="label" translatable="yes">Desfazer</property>
+    <property name="short_label" translatable="yes">Desfazer</property>
+    <property name="tooltip" translatable="yes">Desfaz a última ação</property>
     <property name="stock_id">gtk-undo</property>
     <property name="sensitive">False</property>
     <property name="always_show_image">True</property>
@@ -194,42 +194,42 @@
     <property name="group">radioaction_ascii</property>
   </object>
   <object class="GtkRadioAction" id="radioaction_visao_codificao_padronizada">
-    <property name="label">Visão ISO-8859-1</property>
-    <property name="short_label">ISO-8859-1</property>
+    <property name="label" translatable="yes">Visão ISO-8859-1</property>
+    <property name="short_label" translatable="yes">ISO-8859-1</property>
     <property name="draw_as_radio">True</property>
     <property name="active">True</property>
     <signal name="changed" handler="on_radioaction_visao_codificao_padronizada_changed" swapped="no"/>
   </object>
   <object class="GtkRadioAction" id="radioaction_visao_tabela1">
-    <property name="label">Visão Tabela 1</property>
-    <property name="short_label">Visão Tabela 1</property>
+    <property name="label" translatable="yes">Visão Tabela 1</property>
+    <property name="short_label" translatable="yes">Visão Tabela 1</property>
     <property name="draw_as_radio">True</property>
     <property name="value">1</property>
     <property name="group">radioaction_visao_codificao_padronizada</property>
   </object>
   <object class="GtkRadioAction" id="radioaction_visao_tabela2">
-    <property name="label">Visão Tabela 2</property>
-    <property name="short_label">Visão Tabela 2</property>
+    <property name="label" translatable="yes">Visão Tabela 2</property>
+    <property name="short_label" translatable="yes">Visão Tabela 2</property>
     <property name="draw_as_radio">True</property>
     <property name="value">2</property>
     <property name="group">radioaction_visao_codificao_padronizada</property>
   </object>
   <object class="GtkToggleAction" id="toggleaction_modo_edicao">
-    <property name="label">INS</property>
-    <property name="short_label">INS</property>
-    <property name="tooltip">Inserir ou sobrescrever</property>
+    <property name="label" translatable="yes">INS</property>
+    <property name="short_label" translatable="yes">INS</property>
+    <property name="tooltip" translatable="yes">Inserir ou sobrescrever</property>
     <signal name="toggled" handler="on_toggleaction_modo_edicao_toggled" swapped="no"/>
   </object>
   <object class="GtkToggleAction" id="toggleaction_show_offset_panel">
-    <property name="label">Ver offset atual</property>
-    <property name="short_label">Offset atual</property>
-    <property name="tooltip">Se mostra ou não o painel lateral de offset do arquivo</property>
+    <property name="label" translatable="yes">Ver offset atual</property>
+    <property name="short_label" translatable="yes">Offset atual</property>
+    <property name="tooltip" translatable="yes">Se mostra ou não o painel lateral de offset do arquivo</property>
     <property name="active">True</property>
     <signal name="toggled" handler="on_toggleaction_show_offset_panel_toggled" swapped="no"/>
   </object>
   <object class="GtkToggleAction" id="toggleaction_show_text">
-    <property name="label">Exibir texto equivalente</property>
-    <property name="short_label">Texto equivalente</property>
+    <property name="label" translatable="yes">Exibir texto equivalente</property>
+    <property name="short_label" translatable="yes">Texto equivalente</property>
     <property name="active">True</property>
     <signal name="toggled" handler="on_toggleaction_show_text_toggled" swapped="no"/>
   </object>
@@ -1634,7 +1634,6 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_abrir</property>
-                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1647,7 +1646,6 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_salvar</property>
-                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1670,7 +1668,6 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_undo</property>
-                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1683,7 +1680,6 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_redo</property>
-                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1706,7 +1702,6 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_recortar</property>
-                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1719,7 +1714,6 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_copiar</property>
-                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1732,7 +1726,6 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_colar</property>
-                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -1755,7 +1748,6 @@ ou o texto a buscar conforme a codificação de caracteres ativa:</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="related_action">action_abrir_janela_localizar</property>
-                <property name="label" translatable="yes"></property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
