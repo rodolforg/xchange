@@ -25,6 +25,8 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "message_dialogs.h"
+
 
 #define MAX_TABELAS 3
 
@@ -130,8 +132,6 @@ void on_radioaction_visao_codificao_padronizada_changed(GtkRadioAction *action, 
 
 G_MODULE_EXPORT
 void on_fontbutton_painel_bytes_font_set(GtkFontButton *fontbutton, gpointer data);
-
-static void mostraMensagemErro(gchar *msg);
 
 /* liberar com g_strfreev*/
 gchar **obtem_lista_data_dir()
@@ -490,7 +490,7 @@ int main(int argc, char *argv[])
 
 	if (!mostra_janela())
 	{
-		mostraMensagemErro("Não foi possível carregar a interface.");
+		showErrorMessage(NULL, "Não foi possível carregar a interface.");
 		exit(EXIT_FAILURE);
 	}
 
@@ -595,60 +595,6 @@ static void fecharPrograma()
 	gtk_main_quit();
 }
 
-static void mostraMensagemErro(gchar *msg)
-{
-	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window),
-			GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR,
-			GTK_BUTTONS_CLOSE, "heXchange - Erro!");
-	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), msg);
-	gtk_window_set_title(GTK_WINDOW(dialog), "heXchange");
-	gtk_window_set_icon_from_file(GTK_WINDOW(dialog), "arte/icone.png", NULL);
-	gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-}
-
-static void mostraMensagemAviso(gchar *msg)
-{
-	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window),
-			GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_WARNING,
-			GTK_BUTTONS_CLOSE, "heXchange - Atenção!");
-	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), msg);
-	gtk_window_set_title(GTK_WINDOW(dialog), "heXchange");
-	gtk_window_set_icon_from_file(GTK_WINDOW(dialog), "arte/icone.png", NULL);
-	gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-}
-
-static gint mostraDialogoSimNao(gchar *msg)
-{
-	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window),
-			GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-			msg);
-	gtk_window_set_title(GTK_WINDOW(dialog), "heXchange");
-	gtk_window_set_icon_from_file(GTK_WINDOW(dialog), "arte/icone.png", NULL);
-	gint resposta = gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-	return resposta;
-}
-
-static gint mostraDialogoSimNaoCancelar(gchar *msg)
-{
-	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window),
-			GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE,
-			msg);
-	gtk_dialog_add_buttons(GTK_DIALOG(dialog), GTK_STOCK_YES, GTK_RESPONSE_YES,
-			GTK_STOCK_NO, GTK_RESPONSE_NO,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-			NULL);
-
-	gtk_window_set_title(GTK_WINDOW(dialog), "heXchange");
-	gtk_window_set_icon_from_file(GTK_WINDOW(dialog), "arte/icone.png", NULL);
-
-	gint resposta = gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-	return resposta;
-}
-
 G_MODULE_EXPORT
 void on_toggleaction_show_offset_panel_toggled(GtkToggleAction *toggleaction,
 		gpointer data)
@@ -672,16 +618,13 @@ void on_action_novo_arquivo_activate(GtkAction *action, gpointer data)
 	if (!file_changes_saved)
 	{
 		// TODO: Perguntar se quer salvar, descartar, cancelar
-		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window),
-				GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-				"Existem alterações que não foram salvas.\nDeseja realmente abrir um arquivo?");
-		if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_YES)
+		gint resultado = showYesNoDialog(GTK_WINDOW(main_window),
+			"Existem alterações que não foram salvas.\nDeseja realmente abrir um arquivo?");
+		if (resultado != GTK_RESPONSE_YES)
 		{
-			gtk_widget_destroy(dialog);
 			return;
 		}
 		fecharArquivo();
-		gtk_widget_destroy(dialog);
 	}
 	else if (nomeArquivoAtual != NULL)
 	{
@@ -755,7 +698,7 @@ static gboolean abre_arquivo(const char *nome_arquivo)
 		if (xf == NULL)
 		{
 			gchar *msg = g_strdup_printf("Não conseguiu carregar o arquivo %s .", filename_decoded);
-			mostraMensagemErro(msg);
+			showErrorMessage(GTK_WINDOW(main_window), msg);
 			g_free(msg);
 			g_free(filename_decoded);
 			return FALSE;
@@ -767,13 +710,13 @@ static gboolean abre_arquivo(const char *nome_arquivo)
 	if (!xchange_hex_view_load_file(XCHANGE_HEX_VIEW(hexv), xf))
 	{
 		xchange_close(xf);
-		mostraMensagemErro("Não conseguiu exibir o arquivo!");
+		showErrorMessage(GTK_WINDOW(main_window), "Não conseguiu exibir o arquivo!");
 		return FALSE;
 	}
 
 	xchange_hex_view_set_editable(XCHANGE_HEX_VIEW(hexv), editavel);
 	if (!editavel)
-		mostraMensagemAviso("O arquivo só pôde ser aberto para leitura.");
+		showWarningMessage(GTK_WINDOW(main_window), "O arquivo só pôde ser aberto para leitura.");
 
 	g_free(nomeArquivoAtual);
 	nomeArquivoAtual = g_strdup(nome_arquivo);
@@ -806,7 +749,7 @@ static gboolean tenta_abrir_arquivo(const char *filename)
 	if (!file_changes_saved)
 	{
 		// TODO: Perguntar se quer salvar, descartar, cancelar
-		gint resposta = mostraDialogoSimNao("Existem alterações que não foram salvas.\nDeseja realmente abrir um arquivo?");
+		gint resposta = showYesNoDialog(GTK_WINDOW(main_window), "Existem alterações que não foram salvas.\nDeseja realmente abrir um arquivo?");
 		if (resposta != GTK_RESPONSE_YES)
 			return FALSE;
 
@@ -892,7 +835,7 @@ G_MODULE_EXPORT void on_action_salvar_activate(GtkAction *action, gpointer data)
 	if (!xchange_save(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
 	{
 		perror("Salvando");
-		mostraMensagemErro("Erro ao salvar.\nExperimente \"salvar como\" ou \"como cópia\"\n");
+		showErrorMessage(GTK_WINDOW(main_window), "Erro ao salvar.\nExperimente \"salvar como\" ou \"como cópia\"\n");
 	}
 	else
 	{
@@ -945,16 +888,13 @@ G_MODULE_EXPORT gboolean on_main_window_delete_event(GtkWidget *widget,
 		return FALSE;
 	}
 	// TODO: Perguntar se quer salvar, descartar, cancelar
-	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window),
-			GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-			"Existem alterações que não foram salvas.\nDeseja realmente sair?");
-	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES)
+	gint resultado = showYesNoDialog(GTK_WINDOW(main_window),
+		"Existem alterações que não foram salvas.\nDeseja realmente sair?");
+	if (resultado == GTK_RESPONSE_YES)
 	{
-		gtk_widget_destroy(dialog);
 		fecharPrograma();
 		return FALSE;
 	}
-	gtk_widget_destroy(dialog);
 	return TRUE;
 }
 
@@ -966,16 +906,13 @@ G_MODULE_EXPORT void on_action_sair_activate(GtkAction *action, gpointer data)
 		return;
 	}
 	// TODO: Perguntar se quer salvar, descartar, cancelar
-	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window),
-			GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-			"Existem alterações que não foram salvas.\nDeseja realmente sair?");
-	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES)
+	gint resultado = showYesNoDialog(GTK_WINDOW(main_window),
+		"Existem alterações que não foram salvas.\nDeseja realmente sair?");
+	if (resultado == GTK_RESPONSE_YES)
 	{
-		gtk_widget_destroy(dialog);
 		fecharPrograma();
 		return;
 	}
-	gtk_widget_destroy(dialog);
 }
 
 G_MODULE_EXPORT
@@ -1103,7 +1040,7 @@ static XChangeTable *carregar_tabela(const char *filename, const char *encoding)
 	if (xt == NULL)
 	{
 		gchar * msg = g_strdup_printf("Não conseguiu abrir o arquivo de codificação de caracteres!\n%s",filename);
-		mostraMensagemErro(msg);
+		showErrorMessage(GTK_WINDOW(main_window), msg);
 		g_free(msg);
 		return NULL;
 	}
@@ -1354,12 +1291,12 @@ static void tenta_ir_para(const char *texto)
 			off_t cursor = xchange_hex_view_get_cursor(XCHANGE_HEX_VIEW(hexv));
 			if (filesize && cursor < filesize -1)
 			{
-				if (mostraDialogoSimNao("O destino está além do fim do arquivo.\nDeseja ir ao fim do arquivo?") != GTK_RESPONSE_YES)
+				if (showYesNoDialog(GTK_WINDOW(main_window), "O destino está além do fim do arquivo.\nDeseja ir ao fim do arquivo?") != GTK_RESPONSE_YES)
 					return;
 			}
 			else
 			{
-				mostraMensagemErro("O destino está além do fim do arquivo.");
+				showErrorMessage(GTK_WINDOW(main_window), "O destino está além do fim do arquivo.");
 				return;
 			}
 		}
@@ -1499,7 +1436,7 @@ void on_action_colar_activate(GtkAction *action, gpointer data)
 			{
 				if (tamanho_selecao < tamanho_bytes)
 				{
-					gint resposta = mostraDialogoSimNaoCancelar("A seleção é menor que a quantidade de bytes a substituir.\nDeseja acrescentar os bytes em excesso?");
+					gint resposta = showYesNoCancelDialog(GTK_WINDOW(main_window), "A seleção é menor que a quantidade de bytes a substituir.\nDeseja acrescentar os bytes em excesso?");
 					if (resposta == GTK_RESPONSE_NO)
 					{
 						if (!xchange_hex_view_replace_bytes(XCHANGE_HEX_VIEW(hexv), bytes, offset_inicio, tamanho_selecao))
@@ -1901,12 +1838,12 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 				// Se o fim da busca é o fim do arquivo
 				if (localizar->fim == 0 || localizar->fim >= xchange_get_size(xf)-1)
 				{
-					if (mostraDialogoSimNao("A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?") == GTK_RESPONSE_YES)
+					if (showYesNoDialog(GTK_WINDOW(main_window), "A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?") == GTK_RESPONSE_YES)
 						achou = xchange_find(xf, 0, 0, bytes_chave, tamanho_bytes);
 				}
 				else
 				{
-					if (mostraDialogoSimNao("A busca alcançou o fim do intervalo e não localizou a sequência.\nDeseja buscar a partir do início do intervalo?") == GTK_RESPONSE_YES)
+					if (showYesNoDialog(GTK_WINDOW(main_window), "A busca alcançou o fim do intervalo e não localizou a sequência.\nDeseja buscar a partir do início do intervalo?") == GTK_RESPONSE_YES)
 						achou = xchange_find(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
 				}
 			}
@@ -1919,12 +1856,12 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 			{
 				if (localizar->inicio == 0 && (localizar->fim == 0 || localizar->fim == xchange_get_size(xf) -1))
 				{
-					if (mostraDialogoSimNao("A busca alcançou o começo do arquivo e não localizou a sequência.\nDeseja buscar a partir do fim do arquivo?") == GTK_RESPONSE_YES)
+					if (showYesNoDialog(GTK_WINDOW(main_window), "A busca alcançou o começo do arquivo e não localizou a sequência.\nDeseja buscar a partir do fim do arquivo?") == GTK_RESPONSE_YES)
 						achou = xchange_find_backwards(xf, 0, xchange_get_size(xf) - 1, bytes_chave, tamanho_bytes);
 				}
 				else
 				{
-					if (mostraDialogoSimNao("A busca alcançou o começo do intervalo e não localizou a sequência.\nDeseja buscar a partir do fim do intervalo?") == GTK_RESPONSE_YES)
+					if (showYesNoDialog(GTK_WINDOW(main_window), "A busca alcançou o começo do intervalo e não localizou a sequência.\nDeseja buscar a partir do fim do intervalo?") == GTK_RESPONSE_YES)
 						achou = xchange_find_backwards(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
 				}
 			}
@@ -2247,7 +2184,7 @@ void on_action_substituir_activate(GtkAction *action, gpointer data)
 	{
 		if (!verifica_validade_sequencia_bytes())
 		{
-			mostraMensagemErro("Sequência de bytes inválida!");
+			showErrorMessage(GTK_WINDOW(main_window), "Sequência de bytes inválida!");
 			destroi_dados_localizar(parametrosLocalizar);
 			g_free(parametrosLocalizar);
 			return;
@@ -2261,7 +2198,7 @@ void on_action_substituir_activate(GtkAction *action, gpointer data)
 	{
 		if (!verifica_validade_sequencia_caracteres())
 		{
-			mostraMensagemErro("Sequência de caracteres inválida!");
+			showErrorMessage(GTK_WINDOW(main_window), "Sequência de caracteres inválida!");
 			destroi_dados_localizar(parametrosLocalizar);
 			g_free(parametrosLocalizar);
 			return;
@@ -2380,14 +2317,12 @@ void on_action_fechar_arquivo_activate(GtkAction *action, gpointer data)
 		return;
 	}
 	// TODO: Perguntar se quer salvar, descartar, cancelar
-	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window),
-			GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-			"Existem alterações que não foram salvas.\nDeseja realmente fechar o arquivo?");
-	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES)
+	gint resultado = showYesNoDialog(GTK_WINDOW(main_window),
+		"Existem alterações que não foram salvas.\nDeseja realmente fechar o arquivo?");
+	if (resultado == GTK_RESPONSE_YES)
 	{
 		fecharArquivo();
 	}
-	gtk_widget_destroy(dialog);
 }
 
 G_MODULE_EXPORT
@@ -2493,6 +2428,6 @@ G_MODULE_EXPORT
 void on_action_abre_preferencias_activate(GtkAction *action, gpointer data)
 {
 	if (!abrir_dialogo_preferencias(&preferencias))
-		mostraMensagemErro("Não conseguiu abrir a janela de preferências.");
+		showErrorMessage(GTK_WINDOW(main_window), "Não conseguiu abrir a janela de preferências.");
 }
 
