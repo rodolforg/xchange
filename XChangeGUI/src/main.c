@@ -27,6 +27,8 @@
 
 #include "message_dialogs.h"
 
+#include "filehandler.h"
+
 
 #define MAX_TABELAS 3
 
@@ -105,7 +107,6 @@ GKeyFile* preferenciasKeyFile;
 Preferencias preferencias;
 
 gboolean file_changes_saved;
-gint changes_since_save;
 gint changes_until_last_save;
 
 static void mudou_posicao_cursor(XChangeHexView *hexv, gpointer data);
@@ -119,9 +120,15 @@ static void destroi_dados_localizar(struct DadosLocalizar *);
 static uint8_t *recupera_bytes_de_texto_hexa(const gchar *texto, int *tamanho_bytes, const gchar *contexto);
 static uint8_t *converte_pela_codificacao(const char *texto, int *tamanho_bytes, const char *contexto);
 
+Filehandler *fh;
 
-static gboolean abre_arquivo(const char *nome_arquivo);
-static gboolean tenta_abrir_arquivo(const char *filename);
+static void novo_arquivo(gpointer data);
+static gboolean abre_arquivo(const char *nome_arquivo, gpointer data);
+static gboolean salvar_arquivo(gpointer data);
+static gboolean salvar_arquivo_como(const gchar *nome_arquivo, gpointer data);
+static void fechar_arquivo();
+static void acrescenta_aos_recentes(const gchar*nome_arquivo, gpointer data);
+
 G_MODULE_EXPORT
 void on_abrir_arquivo_definido_activate(GtkWidget *widget, gpointer data);
 
@@ -194,7 +201,7 @@ gboolean carrega_arquivo_interface(GtkBuilder *builder, const gchar *arquivo)
 	return TRUE;
 }
 
-static gboolean mostra_janela()
+static gboolean mostra_janela(Filehandler *fh)
 {
 	GtkBuilder * builder;
 
@@ -208,7 +215,7 @@ static gboolean mostra_janela()
 		return FALSE;
 	}
 
-	gtk_builder_connect_signals(builder, NULL);
+	gtk_builder_connect_signals(builder, fh);
 
 	main_window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
 	menu_item_abrir_recente = GTK_WIDGET(gtk_builder_get_object(builder, "menuitem_abrir_recente"));
@@ -301,11 +308,18 @@ static gboolean mostra_janela()
 	comboboxentry_codificacao_caracteres = GTK_WIDGET(gtk_builder_get_object(builder,
 			"comboboxentry_codificacao_caracteres"));
 
+	// Configura as ações para o Filehandler
+	fh->actions.close = GTK_ACTION(gtk_builder_get_object(builder, "action_fechar"));
+	fh->actions.save = GTK_ACTION(gtk_builder_get_object(builder, "action_salvar"));
+	fh->actions.save_as = GTK_ACTION(gtk_builder_get_object(builder, "action_salvar_como"));
+
+	// Configura a janela principal para o Filehandler
+	fh->main_window = main_window;
 
 	g_object_unref(builder);
 
-	XChangeFile * xf = xchange_open(NULL, NULL);
-	hexv = xchange_hex_view_new(xf);
+	//XChangeFile * xf = xchange_open(NULL, NULL);
+	hexv = xchange_hex_view_new(NULL);
 	gtk_container_add(GTK_CONTAINER(scrolled_window), hexv);
 
 
@@ -316,7 +330,7 @@ static gboolean mostra_janela()
 	g_signal_connect(hexv, "selection-changed", G_CALLBACK(mudou_selecao),
 				main_window);
 	g_signal_connect(hexv, "changed", G_CALLBACK(mudou_conteudo),
-				main_window);
+				fh); // dados é Filehandler! Para lá poder avisar que algo mudou //TODO: Mudar para dados do aplicativo?
 
 	gtk_window_set_icon_from_file(GTK_WINDOW(main_window), "arte/icone.png", NULL);
 
@@ -418,6 +432,8 @@ static void drag_data_received_handler
         GtkSelectionData *selection_data, guint target_type, guint time,
         gpointer data)
 {
+	Filehandler *fh = data; // TODO: Mudar para pegar dos dados do aplicativo
+
 	gchar *nome = gdk_atom_name(gtk_selection_data_get_target(selection_data));
 
 	if (g_strcmp0(nome, "text/uri-list") == 0)
@@ -430,7 +446,7 @@ static void drag_data_received_handler
 				gchar *arquivo = g_filename_from_uri(uris[0], NULL, NULL);
 				if (arquivo != NULL)
 				{
-					tenta_abrir_arquivo(arquivo);
+					filehandler_open_file(fh, arquivo);
 					g_free(arquivo);
 				}
 			}
@@ -445,7 +461,8 @@ static void drag_data_received_handler
 	gtk_drag_finish(context, TRUE, FALSE, time);
 }
 
-void configura_arrastar_e_soltar()
+// TODO: Substituir aqui (*e nos callbacks*) fh pelos dados do aplicativo
+void configura_arrastar_e_soltar(Filehandler *fh)
 {
 	enum {
 		TARGET_STRING,
@@ -471,9 +488,9 @@ void configura_arrastar_e_soltar()
 		);
 
 	g_signal_connect(hexv, "drag-data-received", G_CALLBACK(drag_data_received_handler),
-					main_window);
+					fh);
 	g_signal_connect(hexv, "drag-drop", G_CALLBACK(drag_drop_handler),
-					main_window);
+					fh);
 }
 
 int main(int argc, char *argv[])
@@ -488,7 +505,25 @@ int main(int argc, char *argv[])
 
 	g_set_application_name ("heXchange");
 
-	if (!mostra_janela())
+	{
+		FilehandlerCallbacks cb;
+
+		cb.new = novo_arquivo;
+		cb.open = abre_arquivo;
+		cb.save = salvar_arquivo;
+		cb.save_as = salvar_arquivo_como;
+		cb.close = fechar_arquivo;
+		cb.include_in_recents = acrescenta_aos_recentes;
+
+		fh = filehandler_new(&cb, NULL, NULL); // TODO: user_data deveria estar aqui com os dados do aplicativo
+		if (fh == NULL)
+		{
+			showErrorMessage(NULL, "Não foi possível configurar para manipular os arquivos.");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (!mostra_janela(fh))
 	{
 		showErrorMessage(NULL, "Não foi possível carregar a interface.");
 		exit(EXIT_FAILURE);
@@ -516,7 +551,6 @@ int main(int argc, char *argv[])
 
 	file_changes_saved = TRUE;
 	changes_until_last_save = 0;
-	changes_since_save = 0;
 
 	gchar *autores[2] = {NULL, NULL};
 	const char * autor = ">moc.liamg@groflodor< GRoflodoR";
@@ -538,11 +572,13 @@ int main(int argc, char *argv[])
 	if (argc > 1)
 	{
 		// Abre arquivo listado na linha de comando
-		abre_arquivo(argv[1]);
+		filehandler_open_file(fh, argv[1]);
 	}
+	else
+		filehandler_on_action_new_activate(NULL, fh);
 
 	// Arrastar e soltar
-	configura_arrastar_e_soltar();
+	configura_arrastar_e_soltar(fh); // TODO: trocar para passar os dados do aplicativo
 
 	gtk_main();
 
@@ -559,6 +595,8 @@ int main(int argc, char *argv[])
 	for (n = 0; n < qtd_tabelas; n++)
 		xchange_table_close(xt_tabela[n]);
 
+	filehandler_destroy(fh);
+
 	exit(qtdErros);
 }
 
@@ -567,7 +605,6 @@ void on_action_undo_activate(GtkAction *action, gpointer user_data)
 {
 	xchange_hex_view_undo(XCHANGE_HEX_VIEW(hexv));
 	gtk_widget_queue_draw(hexv);
-	changes_since_save -= 2;
 }
 
 G_MODULE_EXPORT
@@ -575,24 +612,15 @@ void on_action_redo_activate(GtkAction *action, gpointer user_data)
 {
 	xchange_hex_view_redo(XCHANGE_HEX_VIEW(hexv));
 	gtk_widget_queue_draw(hexv);
-	changes_since_save += 0;
 }
 
-static void fecharArquivo()
+static void fechar_arquivo()
 {
 	limpa_barra_de_estado("Arquivo");
 	xchange_hex_view_close_file(XCHANGE_HEX_VIEW(hexv));
-	g_free(nomeArquivoAtual);
-	nomeArquivoAtual = NULL;
-	gtk_window_set_title(GTK_WINDOW(main_window), "heXchange");
-	file_changes_saved = TRUE;
-}
 
-static void fecharPrograma()
-{
-	fecharArquivo();
-	gtk_widget_destroy(main_window);
-	gtk_main_quit();
+	gtk_window_set_title(GTK_WINDOW(main_window), g_get_application_name());
+	file_changes_saved = TRUE;
 }
 
 G_MODULE_EXPORT
@@ -614,66 +642,32 @@ void on_toggleaction_show_text_toggled(GtkToggleAction *toggleaction,
 G_MODULE_EXPORT
 void on_action_novo_arquivo_activate(GtkAction *action, gpointer data)
 {
+	filehandler_on_action_new_activate(action, data);
+}
+
+static void novo_arquivo(gpointer data)
+{
 	limpa_barra_de_estado("Arquivo");
-	if (!file_changes_saved)
-	{
-		// TODO: Perguntar se quer salvar, descartar, cancelar
-		gint resultado = showYesNoDialog(GTK_WINDOW(main_window),
-			"Existem alterações que não foram salvas.\nDeseja realmente abrir um arquivo?");
-		if (resultado != GTK_RESPONSE_YES)
-		{
-			return;
-		}
-		fecharArquivo();
-	}
-	else if (nomeArquivoAtual != NULL)
-	{
-		fecharArquivo();
-	}
 	XChangeFile * xf = xchange_open(NULL, NULL);
 	xchange_hex_view_load_file(XCHANGE_HEX_VIEW(hexv), xf);
 	file_changes_saved = TRUE;
-	changes_since_save = 0;
 	changes_until_last_save = 0;
 }
 
 G_MODULE_EXPORT
 void on_action_abrir_activate(GtkAction *action, gpointer data)
 {
-	limpa_barra_de_estado("Arquivo");
-
-	GtkWidget * dialog = gtk_file_chooser_dialog_new("Abrir arquivo...",
-			GTK_WINDOW(main_window), GTK_FILE_CHOOSER_ACTION_OPEN,
-			GTK_STOCK_OPEN, GTK_RESPONSE_OK, GTK_STOCK_CANCEL,
-			GTK_RESPONSE_CANCEL, NULL);
-
-	if (ultimo_diretorio != NULL)
-		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-				ultimo_diretorio);
-
-	gint result = gtk_dialog_run(GTK_DIALOG(dialog));
-
-	if (result == GTK_RESPONSE_OK)
-	{
-
-		char *filename;
-		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
-		tenta_abrir_arquivo(filename);
-		g_free(filename);
-	}
-	gtk_widget_destroy(dialog);
-
+	filehandler_on_action_open_activate(action, data);
 }
 
 G_MODULE_EXPORT
 void on_abrir_arquivo_definido_activate(GtkWidget *widget, gpointer data)
 {
-	gchar *nome_arquivo = g_strdup(data);
-	tenta_abrir_arquivo(nome_arquivo);
-	g_free(nome_arquivo);
+	// FIXME: dar um jeito sem usar variável global!
+	filehandler_open_file(fh, data);
 }
 
-static void acrescenta_aos_recentes(const gchar*nome_arquivo)
+static void acrescenta_aos_recentes(const gchar*nome_arquivo, gpointer data)
 {
 	GList * item_recente = g_list_find_custom(preferencias.arquivos_recentes, nome_arquivo, g_strcmp0);
 	if (item_recente != NULL)
@@ -685,7 +679,17 @@ static void acrescenta_aos_recentes(const gchar*nome_arquivo)
 	elabora_menu_recentes();
 }
 
-static gboolean abre_arquivo(const char *nome_arquivo)
+static void atualiza_titulo_janela(const gchar *nome_arquivo, const gchar *diretorio)
+{
+	const gchar *nome_app = g_get_application_name();
+	gchar *nome = g_path_get_basename(nome_arquivo);
+	gchar *new_title = g_strdup_printf("%s - %s (%s)", nome_app, nome, diretorio);
+	g_free(nome);
+	gtk_window_set_title(GTK_WINDOW(main_window), new_title);
+	g_free(new_title);
+}
+
+static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 {
 	limpa_barra_de_estado("Arquivo");
 	gboolean editavel = TRUE;
@@ -706,7 +710,7 @@ static gboolean abre_arquivo(const char *nome_arquivo)
 		editavel = FALSE;
 	}
 	g_free(filename_decoded);
-	//fecharArquivo();
+
 	if (!xchange_hex_view_load_file(XCHANGE_HEX_VIEW(hexv), xf))
 	{
 		xchange_close(xf);
@@ -718,133 +722,75 @@ static gboolean abre_arquivo(const char *nome_arquivo)
 	if (!editavel)
 		showWarningMessage(GTK_WINDOW(main_window), "O arquivo só pôde ser aberto para leitura.");
 
-	g_free(nomeArquivoAtual);
-	nomeArquivoAtual = g_strdup(nome_arquivo);
-	g_free(ultimo_diretorio);
-	ultimo_diretorio = g_path_get_dirname(nome_arquivo);
-
 	file_changes_saved = TRUE;
-	changes_since_save = 0;
 	changes_until_last_save = 0;
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
-	gchar *nome = g_path_get_basename(nome_arquivo);
-	gchar *new_title = g_strdup_printf("heXchange - %s (%s)", nome, ultimo_diretorio);
-	g_free(nome);
-	gtk_window_set_title(GTK_WINDOW(main_window), new_title);
-	g_free(new_title);
-
-	// Acrescenta à lista de recentes
-	acrescenta_aos_recentes(nome_arquivo);
+	atualiza_titulo_janela(nome_arquivo, ultimo_diretorio);
 
 	if (editavel)
 		pipoca_na_barra_de_estado("Arquivo", "Arquivo aberto.");
 	else
 		pipoca_na_barra_de_estado("Arquivo", "Arquivo aberto somente para leitura.");
+
 	return TRUE;
-}
-
-static gboolean tenta_abrir_arquivo(const char *filename)
-{
-	if (!file_changes_saved)
-	{
-		// TODO: Perguntar se quer salvar, descartar, cancelar
-		gint resposta = showYesNoDialog(GTK_WINDOW(main_window), "Existem alterações que não foram salvas.\nDeseja realmente abrir um arquivo?");
-		if (resposta != GTK_RESPONSE_YES)
-			return FALSE;
-
-		fecharArquivo();
-	}
-	else if (nomeArquivoAtual != NULL)
-	{
-		fecharArquivo();
-	}
-
-
-	xchange_set_max_memory_size (preferencias.tamanho_buffer_arquivo*1024*1024);
-	return abre_arquivo(filename);
 }
 
 //#ifndef __WIN32__
 G_MODULE_EXPORT void on_action_salvar_como_activate(GtkAction *action,
 		gpointer data)
 {
+	filehandler_on_action_save_as_activate(action, data);
+}
+
+static gboolean salvar_arquivo_como(const gchar *nome_arquivo, gpointer data)
+{
 	limpa_barra_de_estado("Arquivo");
 
-	GtkWidget * dialog = gtk_file_chooser_dialog_new("Salvar como...",
-			GTK_WINDOW(main_window), GTK_FILE_CHOOSER_ACTION_SAVE,
-			GTK_STOCK_SAVE, GTK_RESPONSE_OK, GTK_STOCK_CANCEL,
-			GTK_RESPONSE_CANCEL, NULL);
+	char *filename_decoded = g_locale_from_utf8(nome_arquivo, -1, NULL, NULL, NULL);
+	gboolean salvou = xchange_hex_view_save_file(XCHANGE_HEX_VIEW(hexv), filename_decoded);
+	g_free(filename_decoded);
 
-	if (ultimo_diretorio != NULL)
-		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-				ultimo_diretorio);
-
-	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
-
-	if (nomeArquivoAtual != NULL)
-		gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(dialog), nomeArquivoAtual);
-
-	gint result = gtk_dialog_run(GTK_DIALOG(dialog));
-
-	if (result == GTK_RESPONSE_OK)
+	if (!salvou)
 	{
-		char *nome_arquivo;
-		nome_arquivo = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
-
-		char *filename_decoded = g_locale_from_utf8(nome_arquivo, -1, NULL, NULL, NULL);
-		xchange_hex_view_save_file(XCHANGE_HEX_VIEW(hexv), filename_decoded);
-		g_free(filename_decoded);
-
-		g_free(nomeArquivoAtual);
-		nomeArquivoAtual = g_strdup(nome_arquivo);
-		g_free(ultimo_diretorio);
-		ultimo_diretorio = g_path_get_dirname(nome_arquivo);
-
-		file_changes_saved = TRUE;
-		changes_since_save = 0;
-		changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
-		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
-
-		gchar *nome = g_path_get_basename(nome_arquivo);
-		gchar *new_title = g_strdup_printf("heXchange - %s (%s)", nome, ultimo_diretorio);
-		g_free(nome);
-		gtk_window_set_title(GTK_WINDOW(main_window), new_title);
-		g_free(new_title);
-
-		// Acrescenta à lista de recentes
-		acrescenta_aos_recentes(nome_arquivo);
-		g_free(nome_arquivo);
-
-		pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
+		showErrorMessage(GTK_WINDOW(main_window), "Não conseguiu salvar o arquivo!");
+		return FALSE;
 	}
-	gtk_widget_destroy(dialog);
+
+	file_changes_saved = TRUE;
+	changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
+	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
+
+	atualiza_titulo_janela(nome_arquivo, ultimo_diretorio);
+
+	pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
+
+	return TRUE;
 }
 
 
 G_MODULE_EXPORT void on_action_salvar_activate(GtkAction *action, gpointer data)
 {
-	limpa_barra_de_estado("Arquivo");
+	filehandler_on_action_save_activate(action, data);
+}
 
-	if (nomeArquivoAtual == NULL)
-	{
-		on_action_salvar_como_activate(action, data);
-		return;
-	}
+static gboolean salvar_arquivo(gpointer data)
+{
+	limpa_barra_de_estado("Arquivo");
 
 	if (!xchange_save(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
 	{
 		perror("Salvando");
 		showErrorMessage(GTK_WINDOW(main_window), "Erro ao salvar.\nExperimente \"salvar como\" ou \"como cópia\"\n");
+		return FALSE;
 	}
-	else
-	{
-		pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
-		file_changes_saved = TRUE;
-		changes_since_save = 0;
-		changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
-		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
-	}
+
+	pipoca_na_barra_de_estado("Arquivo", "Arquivo salvo.");
+	file_changes_saved = TRUE;
+	changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
+	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
+
+	return TRUE;
 }
 
 G_MODULE_EXPORT void on_action_salvar_copia_activate(GtkAction *action,
@@ -882,37 +828,12 @@ G_MODULE_EXPORT void on_action_salvar_copia_activate(GtkAction *action,
 G_MODULE_EXPORT gboolean on_main_window_delete_event(GtkWidget *widget,
 		GdkEvent *event, gpointer data)
 {
-	if (file_changes_saved)
-	{
-		fecharPrograma();
-		return FALSE;
-	}
-	// TODO: Perguntar se quer salvar, descartar, cancelar
-	gint resultado = showYesNoDialog(GTK_WINDOW(main_window),
-		"Existem alterações que não foram salvas.\nDeseja realmente sair?");
-	if (resultado == GTK_RESPONSE_YES)
-	{
-		fecharPrograma();
-		return FALSE;
-	}
-	return TRUE;
+	return filehandler_on_main_window_delete_event(widget, event, data);
 }
 
 G_MODULE_EXPORT void on_action_sair_activate(GtkAction *action, gpointer data)
 {
-	if (file_changes_saved)
-	{
-		fecharPrograma();
-		return;
-	}
-	// TODO: Perguntar se quer salvar, descartar, cancelar
-	gint resultado = showYesNoDialog(GTK_WINDOW(main_window),
-		"Existem alterações que não foram salvas.\nDeseja realmente sair?");
-	if (resultado == GTK_RESPONSE_YES)
-	{
-		fecharPrograma();
-		return;
-	}
+	filehandler_on_action_quit_activate(action, data);
 }
 
 G_MODULE_EXPORT
@@ -2315,18 +2236,7 @@ void on_action_substituir_activate(GtkAction *action, gpointer data)
 G_MODULE_EXPORT
 void on_action_fechar_arquivo_activate(GtkAction *action, gpointer data)
 {
-	if (file_changes_saved)
-	{
-		fecharArquivo();
-		return;
-	}
-	// TODO: Perguntar se quer salvar, descartar, cancelar
-	gint resultado = showYesNoDialog(GTK_WINDOW(main_window),
-		"Existem alterações que não foram salvas.\nDeseja realmente fechar o arquivo?");
-	if (resultado == GTK_RESPONSE_YES)
-	{
-		fecharArquivo();
-	}
+	filehandler_on_action_close_activate(action, data);
 }
 
 G_MODULE_EXPORT
@@ -2409,6 +2319,8 @@ static void mudou_selecao(XChangeHexView *hexv, gpointer data)
 
 static void mudou_conteudo(XChangeHexView *hexv, gpointer data)
 {
+	Filehandler *fh = data; // TODO: Mudar para dados dos aplicativos
+
 	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
 	gtk_action_set_sensitive(action_undo, xchange_has_undo(xf));
 	gtk_action_set_sensitive(action_redo, xchange_has_redo(xf));
@@ -2420,11 +2332,14 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data)
 	{
 		file_changes_saved = TRUE;
 		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
+		filehandler_file_changed(fh, FALSE);
 	}
 	else
 	{
 		file_changes_saved = FALSE;
 		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), "*");
+
+		filehandler_file_changed(fh, TRUE);
 	}
 }
 
