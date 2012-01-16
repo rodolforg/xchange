@@ -37,7 +37,7 @@ typedef struct {
 	gchar *current_filename;
 	gchar *last_dir;
 	GtkWidget *main_window;
-	
+
 	gpointer user_data;
 
 	FilehandlerCallbacks callbacks;
@@ -54,6 +54,9 @@ void filehandler_destroy(Filehandler *fh);
 
 // Get the name of the current file
 const gchar *filehandler_get_filename(const Filehandler *fh);
+
+// Get the name of the last chosen directory
+const gchar *filehandler_get_directory(const Filehandler *fh);
 
 // Tell Filehandler that the file has been changed.
 //   You should really use this, as based on this information,

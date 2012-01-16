@@ -94,9 +94,6 @@ XChangeTable **xt_tabela;
 gint qtd_tabelas;
 gint id_tabela_atual;
 
-gchar *ultimo_diretorio;
-char *nomeArquivoAtual;
-
 struct DadosLocalizar
 {
 	gchar *texto_a_localizar;
@@ -498,8 +495,6 @@ void configura_arrastar_e_soltar(Filehandler *fh)
 int main(int argc, char *argv[])
 {
 	int qtdErros = 0;
-	ultimo_diretorio = NULL;
-	nomeArquivoAtual = NULL;
 
 	setlocale(LC_ALL, "");
 	bindtextdomain (GETTEXT_PACKAGE, HEXCHANGELOCALEDIR);
@@ -595,8 +590,6 @@ int main(int argc, char *argv[])
 	// Liberando preferências
 	destroi_preferencias(&preferencias);
 
-	g_free(ultimo_diretorio);
-
 	// Destrói dados de localização
 	destroi_dados_localizar(&dados_localizar);
 
@@ -689,12 +682,14 @@ static void acrescenta_aos_recentes(const gchar*nome_arquivo, gpointer data)
 	elabora_menu_recentes();
 }
 
-static void atualiza_titulo_janela(const gchar *nome_arquivo, const gchar *diretorio)
+static void atualiza_titulo_janela(const gchar *nome_arquivo)
 {
 	const gchar *nome_app = g_get_application_name();
 	gchar *nome = g_path_get_basename(nome_arquivo);
-	gchar *new_title = g_strdup_printf("%s - %s (%s)", nome_app, nome, diretorio);
+	gchar *nome_dir = g_path_get_dirname(nome_arquivo);
+	gchar *new_title = g_strdup_printf("%s - %s (%s)", nome_app, nome, nome_dir);
 	g_free(nome);
+	g_free(nome_dir);
 	gtk_window_set_title(GTK_WINDOW(main_window), new_title);
 	g_free(new_title);
 }
@@ -735,7 +730,7 @@ static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 	changes_until_last_save = 0;
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
-	atualiza_titulo_janela(nome_arquivo, ultimo_diretorio);
+	atualiza_titulo_janela(nome_arquivo);
 
 	if (editavel)
 		pipoca_na_barra_de_estado("Arquivo", _("Arquivo aberto."));
@@ -769,7 +764,7 @@ static gboolean salvar_arquivo_como(const gchar *nome_arquivo, gpointer data)
 	changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
-	atualiza_titulo_janela(nome_arquivo, ultimo_diretorio);
+	atualiza_titulo_janela(nome_arquivo);
 
 	pipoca_na_barra_de_estado("Arquivo", _("Arquivo salvo."));
 
@@ -809,9 +804,9 @@ G_MODULE_EXPORT void on_action_salvar_copia_activate(GtkAction *action,
 			GTK_STOCK_SAVE, GTK_RESPONSE_OK, GTK_STOCK_CANCEL,
 			GTK_RESPONSE_CANCEL, NULL);
 
-	if (ultimo_diretorio != NULL)
+	if (filehandler_get_directory(fh) != NULL)
 		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-				ultimo_diretorio);
+				filehandler_get_directory(fh));
 
 	gint result = gtk_dialog_run(GTK_DIALOG(dialog));
 
@@ -904,9 +899,9 @@ static gchar *usuario_escolhe_arquivo_tabela(gchar **encoding)
 	gchar *filename = NULL;
 	GtkWidget * dialog = filechooserdialog_carregar_texto;
 
-	if (ultimo_diretorio != NULL)
+	if (filehandler_get_directory(fh) != NULL)
 		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-				ultimo_diretorio);
+				filehandler_get_directory(fh));
 
 	GtkFileFilter *filter[3];
 	filter[0] = gtk_file_filter_new ();
@@ -932,22 +927,10 @@ static gchar *usuario_escolhe_arquivo_tabela(gchar **encoding)
 
 	if (result == GTK_RESPONSE_OK)
 	{
-		gchar *dirname;
-
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 
 		if (encoding != NULL)
 			*encoding = obtem_escolha_codificacao(GTK_COMBO_BOX(comboboxentry_codificacao_caracteres_arquivo));
-
-		dirname = g_path_get_dirname(filename);
-		if (dirname != NULL)
-		{
-			g_free(ultimo_diretorio);
-			ultimo_diretorio = dirname;
-		}
-		else
-			pipoca_na_barra_de_estado("Arquivo", _("Problema na identificação do diretório."));
-
 	}
 	gtk_widget_hide(dialog);
 

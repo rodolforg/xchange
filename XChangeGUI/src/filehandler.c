@@ -73,6 +73,12 @@ const gchar *filehandler_get_filename(const Filehandler *fh)
 	return fh != NULL? fh->current_filename : NULL;
 }
 
+// Get the name of the last chosen directory
+const gchar *filehandler_get_directory(const Filehandler *fh)
+{
+	return fh != NULL? fh->last_dir : NULL;
+}
+
 // Tell Filehandler that the file has been changed.
 //   You should really use this, as based on this information,
 //   the user will be asked or not if he wants to save/close the file
