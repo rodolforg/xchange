@@ -3376,10 +3376,10 @@ static void xchange_hex_view_scroll_value_changed(GtkAdjustment *adjustment,
 	XChangeHexView *hexv = XCHANGE_HEX_VIEW(data);
 	if (adjustment == hexv->vadjustment)
 	{
-		gint pos = gtk_adjustment_get_value(adjustment);
-		gint line_height = hexv->font_size + LINE_SPACEMENT;
+		guint64 pos = gtk_adjustment_get_value(adjustment);
+		guint64 line_height = hexv->font_size + LINE_SPACEMENT;
 		hexv->view_offset = -(pos % line_height);
-		gint file_offset = (pos / line_height) * hexv->byte_row_length;
+		guint64 file_offset = (pos / line_height) * hexv->byte_row_length;
 		if (file_offset > xchange_get_size(hexv->xf))
 			file_offset = (xchange_get_size(hexv->xf) / hexv->byte_row_length)
 					* hexv->byte_row_length;
