@@ -98,7 +98,7 @@ static XChangeTable *xchange_table_new()
 	xt->entries_value = NULL;
 	xt->nentries = 0;
 
-	xt->unknown = strdup(DEFAULT_UNKNOWN_CHARACTER);
+	xt->unknown = (uint8_t *) strdup(DEFAULT_UNKNOWN_CHARACTER);
 	xt->lineend_key = NULL;
 	xt->paragraph_key = NULL;
 	xt->unknown_length = strlen(DEFAULT_UNKNOWN_CHARACTER);
@@ -984,10 +984,12 @@ static void swapbubble( void * v[], int i)
 	v[i+1] = aux;
 }
 
-static void bubble(void * v[], int qtd, int (*compare)(void*,void*))
+static void bubble(void * pointer_vector, int qtd, int (*compare)(void*,void*))
 {
 	int i;
 	int trocou;
+
+	void **v = pointer_vector;
 
 	do
 	{
@@ -1315,7 +1317,7 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 			tmp = tmp2;
 		}
 		else
-			tmp = bytes;
+			tmp = (char*) bytes;
 		char *outbuf = tmp;
 		iconv_t icd = iconv_open(table->encoding, "utf-8");
 		if (icd == (iconv_t)-1)
