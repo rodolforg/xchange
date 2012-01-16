@@ -269,6 +269,7 @@ static void interpreta_preferencias(GKeyFile *keyfile, struct Preferencias * pre
 		}
 	}
 	ler_preferencia_inteiro(keyfile, "Arquivos", "Limite de memória reservada", &preferencias->tamanho_buffer_arquivo);
+	xchange_set_max_memory_size(preferencias->tamanho_buffer_arquivo);
 
 	// Aparência
 	ler_preferencia_booleano(keyfile, "Aparência", "Fonte padrão", &preferencias->fonte_padrao);
