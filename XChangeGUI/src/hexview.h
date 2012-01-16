@@ -12,8 +12,12 @@
 #include "file.h"
 #include "chartable.h"
 
+G_BEGIN_DECLS
+
 typedef struct _XChangeHexView XChangeHexView;
 typedef struct _XChangeHexViewClass XChangeHexViewClass;
+
+GType xchange_hex_view_get_type ();
 
 #define XCHANGE_TYPE_HEX_VIEW             (xchange_hex_view_get_type ())
 #define XCHANGE_HEX_VIEW(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), XCHANGE_TYPE_HEX_VIEW, XChangeHexView))
@@ -90,5 +94,6 @@ gboolean xchange_hex_view_insert_bytes(XChangeHexView *xchange_hex_view, const u
 gboolean xchange_hex_view_replace_bytes(XChangeHexView *xchange_hex_view, const uint8_t *bytes, off_t offset, size_t size);
 gboolean xchange_hex_view_delete_bytes(XChangeHexView *xchange_hex_view, off_t offset, size_t size);
 
+G_END_DECLS
 
 #endif /* HEXVIEW_H_ */

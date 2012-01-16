@@ -2152,7 +2152,7 @@ static gboolean miniedition_key_press (GtkWidget *widget, GdkEventKey *event, gp
 		{
 			// Fim de mensagem
 			int paragraph_length;
-			const gchar* paragraph = xchange_table_get_paragraph_markUTF8(mew->hexv->xt, &paragraph_length);
+			const gchar* paragraph = (const gchar*) xchange_table_get_paragraph_markUTF8(mew->hexv->xt, &paragraph_length);
 			if (paragraph != NULL)
 			{
 				gtk_text_buffer_insert_at_cursor(GTK_TEXT_BUFFER(gtk_text_view_get_buffer(mew->view)), paragraph, paragraph_length);
@@ -2163,7 +2163,7 @@ static gboolean miniedition_key_press (GtkWidget *widget, GdkEventKey *event, gp
 		{
 			// Fim de linha
 			int lineend_length;
-			const gchar* lineend = xchange_table_get_lineend_markUTF8(mew->hexv->xt, &lineend_length);
+			const gchar* lineend = (const gchar*) xchange_table_get_lineend_markUTF8(mew->hexv->xt, &lineend_length);
 			if (lineend != NULL)
 			{
 				gtk_text_buffer_insert_at_cursor(GTK_TEXT_BUFFER(gtk_text_view_get_buffer(mew->view)), lineend, lineend_length);
