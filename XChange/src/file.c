@@ -176,7 +176,7 @@ XChangeFile * xchange_open(const char *path, const char *mode)
 	}
 
 	// File history initialization
-	xf->use_history = 1;
+	xf->use_history = 0;
 	xf->history_redo = NULL;
 	xf->history_undo = NULL;
 

@@ -326,6 +326,8 @@ xchange_hex_view_new(XChangeFile *xf)
 		return NULL;
 	}
 
+	xchange_enable_history(xf, 1);
+
 	gtk_widget_set_events(new, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
 			| GDK_KEY_PRESS_MASK | GDK_BUTTON1_MOTION_MASK);
 #if GTK_CHECK_VERSION(2, 18, 0) && ! __WIN32__
