@@ -110,31 +110,31 @@ static XChangeTable *xchange_table_new()
 
 XChangeTable * xchange_table_open(const char *path, TableType type, const char *_encoding)
 {
-	XChangeFile *xf = xchange_open(path, "rb");
+	XChangeFile *xf = xchange_file_open(path, "rb");
 	if (xf == NULL)
 		return NULL;
 
-	size_t filesize = xchange_get_size(xf);
+	size_t filesize = xchange_file_get_size(xf);
 	if (filesize == (size_t)-1)
 	{
-		xchange_close(xf);
+		xchange_file_close(xf);
 		return NULL;
 	}
 
 	uint8_t * contents = malloc(filesize);
 	if (contents == NULL)
 	{
-		xchange_close(xf);
+		xchange_file_close(xf);
 		return NULL;
 	}
 
-	if (xchange_get_bytes(xf, 0, contents, filesize) != filesize)
+	if (xchange_file_get_bytes(xf, 0, contents, filesize) != filesize)
 	{
-		xchange_close(xf);
+		xchange_file_close(xf);
 		free(contents);
 		return NULL;
 	}
-	xchange_close(xf);
+	xchange_file_close(xf);
 
 
 	size_t outsize = 4*filesize;

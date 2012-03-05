@@ -326,7 +326,7 @@ xchange_hex_view_new(XChangeFile *xf)
 		return NULL;
 	}
 
-	xchange_enable_history(xf, 1);
+	xchange_file_enable_history(xf, 1);
 
 	gtk_widget_set_events(new, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
 			| GDK_KEY_PRESS_MASK | GDK_BUTTON1_MOTION_MASK);
@@ -370,7 +370,7 @@ gboolean xchange_hex_view_load_file(XChangeHexView *xchange_hex_view,
 		{
 			return FALSE;
 		}
-		if (xchange_get_bytes(xf, 0, hexv->bytes, hexv->byte_buffer_size) >= 0)
+		if (xchange_file_get_bytes(xf, 0, hexv->bytes, hexv->byte_buffer_size) >= 0)
 			hexv->xf = xf;
 		else
 		{
@@ -402,9 +402,9 @@ gboolean xchange_hex_view_save_file(XChangeHexView *xchange_hex_view, const char
 	XChangeHexView * hexv = XCHANGE_HEX_VIEW(xchange_hex_view);
 	if (filename == NULL)
 	{
-		return xchange_save(hexv->xf) > 0;
+		return xchange_file_save(hexv->xf) > 0;
 	}
-	return xchange_save_as(hexv->xf, filename) > 0;
+	return xchange_file_save_as(hexv->xf, filename) > 0;
 }
 
 void xchange_hex_view_close_file(XChangeHexView *xchange_hex_view)
@@ -425,7 +425,7 @@ void xchange_hex_view_close_file(XChangeHexView *xchange_hex_view)
 	hexv->virtual_w = 0;
 	hexv->virtual_h = 0;
 
-	xchange_close(hexv->xf);
+	xchange_file_close(hexv->xf);
 	hexv->xf = NULL;
 
 	hexv->fileoffset = 0;
@@ -447,7 +447,7 @@ size_t xchange_hex_view_get_file_size(XChangeHexView *xchange_hex_view)
 	XChangeHexView * hexv = XCHANGE_HEX_VIEW(xchange_hex_view);
 	if (hexv == NULL)
 		return (size_t) -1;
-	return xchange_get_size(hexv->xf);
+	return xchange_file_get_size(hexv->xf);
 }
 
 static void xchange_hex_view_destroy(GtkObject *object)
@@ -507,7 +507,7 @@ static void calcula_tamanho_buffer(XChangeHexView *hexv)
 			hexv->bytes = new_buffer;
 			if (hexv->byte_buffer_size < new_size)
 			{
-				xchange_get_bytes(hexv->xf, hexv->fileoffset, hexv->bytes,
+				xchange_file_get_bytes(hexv->xf, hexv->fileoffset, hexv->bytes,
 						new_size);
 			}
 			hexv->byte_buffer_size = new_size;
@@ -608,7 +608,7 @@ static void draw_offset_panel(GtkWidget *widget, cairo_t *cr)
 	int n;
 	char buffer[8 * 2]; // 8 bytes x 2 dígitos hexadecimais/byte
 	off_t off = hexv->fileoffset;
-	size_t filesize = xchange_get_size(hexv->xf);
+	size_t filesize = xchange_file_get_size(hexv->xf);
 	for (n = hexv->font_size + hexv->view_offset; n < allocation.height
 			+ hexv->font_size && off < filesize; n += hexv->font_size + LINE_SPACEMENT)
 	{
@@ -665,7 +665,7 @@ static gboolean get_text_cursor_ij(const XChangeHexView *hexv, off_t offset, int
 		return FALSE;
 
 	gint position = offset - hexv->fileoffset;
-	size_t filesize = xchange_get_size(hexv->xf);
+	size_t filesize = xchange_file_get_size(hexv->xf);
 	if (offset == -1 || offset > filesize || filesize == -1)
 		return FALSE;
 
@@ -717,7 +717,7 @@ static char *get_line_text(const XChangeHexView *hexv, off_t offset, gboolean fu
 //	g_print("offset: %i i: %i j: %i\n", offset, cursor_i, cursor_j);
 
 	gint position = (offset - hexv->fileoffset)%(hexv->byte_row_length);
-	size_t filesize = xchange_get_size(hexv->xf);
+	size_t filesize = xchange_file_get_size(hexv->xf);
 	if (cursor_j >=0 && position < hexv->byte_buffer_size)
 	{
 		int qtd_bytes_linha = hexv->byte_row_length - hexv->bytes_skipped[cursor_j];
@@ -928,7 +928,7 @@ static GdkPoint get_next_text_cursor_position(const XChangeHexView *hexv, off_t 
 {
 	GdkPoint pi, po;
 	off_t proximo_offset = atual;
-	size_t filesize = xchange_get_size(hexv->xf);
+	size_t filesize = xchange_file_get_size(hexv->xf);
 	/*po.x = -1;
 	po.y = -1;
 	if (filesize == (size_t)-1)
@@ -1183,7 +1183,7 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 
 	gdouble cor_r, cor_g, cor_b, cor_a;
 
-	if (hexv->xf == NULL || xchange_get_size(hexv->xf) == (size_t)-1)
+	if (hexv->xf == NULL || xchange_file_get_size(hexv->xf) == (size_t)-1)
 		return;
 	float offset_width = 0;
 	cairo_set_font_size(cr, hexv->font_size);
@@ -1231,7 +1231,7 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 		int text_bytes_to_skip = 0;
 
 		char buffer[hexv->byte_row_length * 3];
-		size_t filesize = xchange_get_size(hexv->xf);
+		size_t filesize = xchange_file_get_size(hexv->xf);
 
 		gint altura = allocation.height;
 //		gdk_drawable_get_size(gtk_widget_get_parent_window(
@@ -1272,8 +1272,8 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 				cairo_move_to(cr, left_x
 						+ hexv->byte_panel_width + TEXT_SPACEMENT, n);
 				int qtd_bytes_linha = hexv->byte_row_length - text_bytes_to_skip;
-				if (hexv->fileoffset + off + hexv->byte_row_length >= xchange_get_size(hexv->xf))
-					qtd_bytes_linha = xchange_get_size(hexv->xf) - (hexv->fileoffset + off);
+				if (hexv->fileoffset + off + hexv->byte_row_length >= xchange_file_get_size(hexv->xf))
+					qtd_bytes_linha = xchange_file_get_size(hexv->xf) - (hexv->fileoffset + off);
 				int largest_entry = xchange_table_get_largest_entry_length(hexv->xt, FALSE);
 				if (largest_entry <= 0)
 					largest_entry = 4;
@@ -1284,9 +1284,9 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 				size_t lidos;
 				int resp_texto = xchange_table_print_best_stringUTF8(hexv->xt,
 						&hexv->bytes[off + text_bytes_to_skip], qtd_bytes_linha
-								>= xchange_get_size(hexv->xf)
+								>= xchange_file_get_size(hexv->xf)
 								- (hexv->fileoffset + off) ? qtd_bytes_linha
-								: xchange_get_size(hexv->xf)
+								: xchange_file_get_size(hexv->xf)
 										- (hexv->fileoffset + off),
 						buffer_texto, qtd_bytes_linha, &lidos);
 
@@ -1585,7 +1585,7 @@ static gboolean avanca_cursor(XChangeHexView *hexv, int qtd, gboolean ignora_hal
 {
 	off_t cursor_inicial = hexv->cursor_position;
 	off_t novo_cursor = hexv->cursor_position;
-	size_t filesize = xchange_get_size(hexv->xf);
+	size_t filesize = xchange_file_get_size(hexv->xf);
 	if (filesize == (size_t)-1 || !filesize)
 		return FALSE;
 	if (!ignora_half)
@@ -1740,7 +1740,7 @@ static int pontoxy_para_offset(const GtkWidget * widget, int x, int y)
 
 	int resposta = ny * hexv->byte_row_length + nx;
 
-	if (resposta >= xchange_get_size(hexv->xf) - hexv->fileoffset)
+	if (resposta >= xchange_file_get_size(hexv->xf) - hexv->fileoffset)
 		resposta = -1;
 	//	printf("nx: %i  ny: %i - %i\n", nx, ny, resposta);
 	return resposta;
@@ -1784,7 +1784,7 @@ static int pontoxy_texto_para_offset(const GtkWidget * widget, int x, int y)
 	if (off_max >= hexv->byte_buffer_size)
 		off_max = hexv->byte_buffer_size-1; // TODO: Investigate what to do in these cases
 	//Out of scope
-	if (off_max > xchange_get_size(hexv->xf) - hexv->fileoffset)
+	if (off_max > xchange_file_get_size(hexv->xf) - hexv->fileoffset)
 		return -1;
 
 	gint x_anterior, off;
@@ -1823,7 +1823,7 @@ static gboolean xchange_hex_view_button_press(GtkWidget *widget,
 		if (offset < 0)
 			return FALSE;
 	}
-	if (xchange_get_size(hexv->xf)!=-1)
+	if (xchange_file_get_size(hexv->xf)!=-1)
 	{
 		if ((event->state & GDK_SHIFT_MASK) && event->button == 1)
 		{
@@ -1949,7 +1949,7 @@ static gboolean xchange_hex_view_motion(GtkWidget *widget,
 			return FALSE;
 	}
 	//if (event->button == 1)
-	if (xchange_get_size(hexv->xf)!=-1)
+	if (xchange_file_get_size(hexv->xf)!=-1)
 	{
 		off_t novo_cursor = hexv->fileoffset + offset;
 
@@ -1989,25 +1989,25 @@ static void xchange_hex_view_typing(XChangeHexView *hexv, uint8_t value)
 	// TODO: Se seleção existe, excluí-la
 	if (!hexv->cursor_position_half)
 	{
-		if (hexv->overwrite && hexv->cursor_position < xchange_get_size(
+		if (hexv->overwrite && hexv->cursor_position < xchange_file_get_size(
 				hexv->xf))
 		{
-			xchange_get_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
+			xchange_file_get_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
 			byte = ((value & 0xf) << 4) | (byte & 0x0f);
-			xchange_replace_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
+			xchange_file_replace_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
 		}
 		else
 		{
 			byte = (value & 0xf) << 4;
-			xchange_insert_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
+			xchange_file_insert_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
 		}
 		hexv->cursor_position_half = TRUE;
 	}
 	else
 	{
-		xchange_get_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
+		xchange_file_get_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
 		byte = (value & 0xf) | (byte & 0xf0);
-		xchange_replace_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
+		xchange_file_replace_bytes(hexv->xf, hexv->cursor_position, &byte, 1);
 
 		avanca_cursor(hexv, 1, FALSE);
 	}
@@ -2016,7 +2016,7 @@ static void xchange_hex_view_typing(XChangeHexView *hexv, uint8_t value)
 		hexv->selection_start = -1;
 		g_signal_emit_by_name(hexv, "selection-changed");
 	}
-	xchange_get_bytes(hexv->xf, hexv->fileoffset, hexv->bytes, hexv->byte_buffer_size);
+	xchange_file_get_bytes(hexv->xf, hexv->fileoffset, hexv->bytes, hexv->byte_buffer_size);
 	update_scroll_bounds(hexv);
 	g_signal_emit_by_name(GTK_WIDGET(hexv), "changed");
 }
@@ -2422,7 +2422,7 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 		if (hexv->cursor_visible)
 		{
 			if (event->state & GDK_SHIFT_MASK)
-				if (hexv->selection_start == -1 && xchange_get_size(hexv->xf))
+				if (hexv->selection_start == -1 && xchange_file_get_size(hexv->xf))
 					change_start_selection(hexv, hexv->cursor_position);
 
 			avanca_cursor(hexv, 1, event->state & (GDK_SHIFT_MASK|GDK_CONTROL_MASK) ? TRUE : FALSE);
@@ -2441,9 +2441,9 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 		{
 			//TODO: Melhorar!
 			if (event->state & GDK_SHIFT_MASK)
-				if (hexv->selection_start == -1 && xchange_get_size(hexv->xf))
+				if (hexv->selection_start == -1 && xchange_file_get_size(hexv->xf))
 					change_start_selection(hexv, hexv->cursor_position);
-			if (hexv->cursor_position + hexv->byte_row_length < xchange_get_size(hexv->xf))
+			if (hexv->cursor_position + hexv->byte_row_length < xchange_file_get_size(hexv->xf))
 			{
 				avanca_cursor(hexv, hexv->byte_row_length, TRUE);
 
@@ -2503,11 +2503,11 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 		{
 			//TODO: Melhorar!
 			if (event->state & GDK_SHIFT_MASK)
-				if (hexv->selection_start == -1 && xchange_get_size(hexv->xf))
+				if (hexv->selection_start == -1 && xchange_file_get_size(hexv->xf))
 					change_start_selection(hexv, hexv->cursor_position);
 
 			if (event->state & GDK_CONTROL_MASK)
-				avanca_cursor(hexv, xchange_get_size(hexv->xf), TRUE);
+				avanca_cursor(hexv, xchange_file_get_size(hexv->xf), TRUE);
 			else
 			{
 				avanca_cursor(hexv, hexv->byte_row_length - 1
@@ -2552,11 +2552,11 @@ static gboolean xchange_hex_view_key_press(GtkWidget *widget,
 		if (hexv->cursor_visible)
 		{
 			if (event->state & GDK_SHIFT_MASK)
-				if (hexv->selection_start == -1 && xchange_get_size(hexv->xf))
+				if (hexv->selection_start == -1 && xchange_file_get_size(hexv->xf))
 					change_start_selection(hexv, hexv->cursor_position);
 
 			gint lines_to_go = hexv->lines_shown; // FIXME: lines_shown não representa a realidade...
-			gint lines_can_go = (xchange_get_size(hexv->xf) - hexv->cursor_position) / hexv->byte_row_length;
+			gint lines_can_go = (xchange_file_get_size(hexv->xf) - hexv->cursor_position) / hexv->byte_row_length;
 			if ( lines_to_go > lines_can_go)
 				lines_to_go = lines_can_go;
 
@@ -2913,7 +2913,7 @@ void xchange_hex_view_goto(XChangeHexView *xchange_hex_view, off_t offset)
 		return;
 
 	off_t cursor_inicial = xchange_hex_view->cursor_position;
-	size_t filesize = xchange_get_size(xchange_hex_view->xf);
+	size_t filesize = xchange_file_get_size(xchange_hex_view->xf);
 	if (filesize == (size_t) -1)
 		return;
 
@@ -2944,7 +2944,7 @@ void xchange_hex_view_goto(XChangeHexView *xchange_hex_view, off_t offset)
 		xchange_hex_view->fileoffset = (destination
 				/ xchange_hex_view->byte_row_length)
 				* xchange_hex_view->byte_row_length;
-		xchange_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset,
+		xchange_file_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset,
 				xchange_hex_view->bytes, xchange_hex_view->byte_buffer_size);
 		gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view)); // FIXME _area
 	}
@@ -3152,14 +3152,14 @@ static void xchange_hex_view_delete(XChangeHexView *xchange_hex_view, off_t orig
 	{
 		int excluiu = 0;
 
-		excluiu = xchange_delete_bytes(xchange_hex_view->xf, origem, qtd);
+		excluiu = xchange_file_delete_bytes(xchange_hex_view->xf, origem, qtd);
 
 		if (excluiu)
 		{
-			xchange_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
+			xchange_file_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
 					xchange_hex_view->byte_buffer_size);
 
-			size_t new_filesize = xchange_get_size(xchange_hex_view->xf);
+			size_t new_filesize = xchange_file_get_size(xchange_hex_view->xf);
 			if (new_filesize != -1 && xchange_hex_view->cursor_position >= new_filesize)
 			{
 				xchange_hex_view->cursor_position_half = FALSE;
@@ -3210,7 +3210,7 @@ guchar *xchange_hex_view_get_bytes(XChangeHexView *xchange_hex_view, off_t offse
 	{
 		return NULL;
 	}
-	size_t bytes_read = xchange_get_bytes(xchange_hex_view->xf, offset, bytes, size);
+	size_t bytes_read = xchange_file_get_bytes(xchange_hex_view->xf, offset, bytes, size);
 	if (bytes_read == 0)
 	{
 		g_free(bytes);
@@ -3228,15 +3228,15 @@ gboolean xchange_hex_view_insert_bytes(XChangeHexView *xchange_hex_view, const u
 		return FALSE;
 	if (xchange_hex_view->xf == NULL)
 		return FALSE;
-	if (offset > xchange_get_size(xchange_hex_view->xf))
+	if (offset > xchange_file_get_size(xchange_hex_view->xf))
 		return FALSE;
 
-	if (!xchange_insert_bytes(xchange_hex_view->xf, offset, bytes, size))
+	if (!xchange_file_insert_bytes(xchange_hex_view->xf, offset, bytes, size))
 	{
 		return FALSE;
 	}
 
-	xchange_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
+	xchange_file_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
 					xchange_hex_view->byte_buffer_size);
 
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
@@ -3251,14 +3251,14 @@ gboolean xchange_hex_view_replace_bytes(XChangeHexView *xchange_hex_view, const 
 		return FALSE;
 	if (xchange_hex_view->xf == NULL)
 		return FALSE;
-	if (offset > xchange_get_size(xchange_hex_view->xf))
+	if (offset > xchange_file_get_size(xchange_hex_view->xf))
 		return FALSE;
 
-	if (!xchange_replace_bytes(xchange_hex_view->xf, offset, bytes, size))
+	if (!xchange_file_replace_bytes(xchange_hex_view->xf, offset, bytes, size))
 	{
 		return FALSE;
 	}
-	xchange_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
+	xchange_file_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
 					xchange_hex_view->byte_buffer_size);
 
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
@@ -3272,18 +3272,18 @@ gboolean xchange_hex_view_delete_bytes(XChangeHexView *xchange_hex_view, off_t o
 		return FALSE;
 	if (xchange_hex_view->xf == NULL)
 		return FALSE;
-	if (offset > xchange_get_size(xchange_hex_view->xf))
+	if (offset > xchange_file_get_size(xchange_hex_view->xf))
 		return FALSE;
 
-	if (!xchange_delete_bytes(xchange_hex_view->xf, offset, size))
+	if (!xchange_file_delete_bytes(xchange_hex_view->xf, offset, size))
 	{
 		return FALSE;
 	}
 
-	xchange_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
+	xchange_file_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
 					xchange_hex_view->byte_buffer_size);
 
-	size_t filesize = xchange_get_size(xchange_hex_view->xf);
+	size_t filesize = xchange_file_get_size(xchange_hex_view->xf);
 	if (xchange_hex_view->cursor_position >= filesize)
 	{
 		retrocede_cursor(xchange_hex_view, xchange_hex_view->cursor_position - filesize +1, TRUE);
@@ -3311,13 +3311,13 @@ gboolean xchange_hex_view_undo(XChangeHexView *xchange_hex_view)
 	if (! xchange_hex_view->editable)
 		return FALSE;
 
-	if (!xchange_undo(xchange_hex_view->xf))
+	if (!xchange_file_undo(xchange_hex_view->xf))
 		return FALSE;
 
-	xchange_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
+	xchange_file_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
 			xchange_hex_view->byte_buffer_size);
 
-	size_t filesize = xchange_get_size(xchange_hex_view->xf);
+	size_t filesize = xchange_file_get_size(xchange_hex_view->xf);
 	if (xchange_hex_view->cursor_position >= filesize)
 	{
 		retrocede_cursor(xchange_hex_view, xchange_hex_view->cursor_position - filesize +1, TRUE);
@@ -3341,13 +3341,13 @@ gboolean xchange_hex_view_redo(XChangeHexView *xchange_hex_view)
 	if (! xchange_hex_view->editable)
 		return FALSE;
 
-	if (!xchange_redo(xchange_hex_view->xf))
+	if (!xchange_file_redo(xchange_hex_view->xf))
 		return FALSE;
 
-	xchange_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
+	xchange_file_get_bytes(xchange_hex_view->xf, xchange_hex_view->fileoffset, xchange_hex_view->bytes,
 			xchange_hex_view->byte_buffer_size);
 
-	size_t filesize = xchange_get_size(xchange_hex_view->xf);
+	size_t filesize = xchange_file_get_size(xchange_hex_view->xf);
 	if (xchange_hex_view->cursor_position >= filesize)
 	{
 		retrocede_cursor(xchange_hex_view, xchange_hex_view->cursor_position - filesize + 1, TRUE);
@@ -3382,12 +3382,12 @@ static void xchange_hex_view_scroll_value_changed(GtkAdjustment *adjustment,
 		guint64 line_height = hexv->font_size + LINE_SPACEMENT;
 		hexv->view_offset = -(pos % line_height);
 		guint64 file_offset = (pos / line_height) * hexv->byte_row_length;
-		if (file_offset > xchange_get_size(hexv->xf))
-			file_offset = (xchange_get_size(hexv->xf) / hexv->byte_row_length)
+		if (file_offset > xchange_file_get_size(hexv->xf))
+			file_offset = (xchange_file_get_size(hexv->xf) / hexv->byte_row_length)
 					* hexv->byte_row_length;
 
 		hexv->fileoffset = file_offset;
-		xchange_get_bytes(hexv->xf, hexv->fileoffset, hexv->bytes,
+		xchange_file_get_bytes(hexv->xf, hexv->fileoffset, hexv->bytes,
 				hexv->byte_buffer_size);
 
 		compute_lines_shown(hexv);
@@ -3412,7 +3412,7 @@ static gboolean xchange_hex_view_set_scroll_adjustments(GtkWidget *widget,
 	gint lines = (allocation.height - xchange_hex_view->view_offset)
 			/ (xchange_hex_view->font_size + LINE_SPACEMENT);
 
-	if (lines * xchange_hex_view->byte_row_length > xchange_get_size(
+	if (lines * xchange_hex_view->byte_row_length > xchange_file_get_size(
 			xchange_hex_view->xf))
 	{
 		g_print("Maior\n");

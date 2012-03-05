@@ -317,7 +317,7 @@ static gboolean mostra_janela(Filehandler *fh)
 
 	g_object_unref(builder);
 
-	//XChangeFile * xf = xchange_open(NULL, NULL);
+	//XChangeFile * xf = xchange_file_open(NULL, NULL);
 	hexv = xchange_hex_view_new(NULL);
 	gtk_container_add(GTK_CONTAINER(scrolled_window), hexv);
 
@@ -648,7 +648,7 @@ void on_action_novo_arquivo_activate(GtkAction *action, gpointer data)
 static void novo_arquivo(gpointer data)
 {
 	limpa_barra_de_estado("Arquivo");
-	XChangeFile * xf = xchange_open(NULL, NULL);
+	XChangeFile * xf = xchange_file_open(NULL, NULL);
 	xchange_hex_view_load_file(XCHANGE_HEX_VIEW(hexv), xf);
 	changes_until_last_save = 0;
 }
@@ -699,11 +699,11 @@ static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 	limpa_barra_de_estado("Arquivo");
 	gboolean editavel = TRUE;
 	char *filename_decoded = g_locale_from_utf8(nome_arquivo, -1, NULL, NULL, NULL);
-	XChangeFile *xf = xchange_open(filename_decoded, "rb+");
+	XChangeFile *xf = xchange_file_open(filename_decoded, "rb+");
 
 	if (xf == NULL)
 	{
-		xf = xchange_open(filename_decoded, "rb");
+		xf = xchange_file_open(filename_decoded, "rb");
 		if (xf == NULL)
 		{
 			gchar *msg = g_strdup_printf(_("Não conseguiu carregar o arquivo %s ."), filename_decoded);
@@ -718,7 +718,7 @@ static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 
 	if (!xchange_hex_view_load_file(XCHANGE_HEX_VIEW(hexv), xf))
 	{
-		xchange_close(xf);
+		xchange_file_close(xf);
 		showErrorMessage(GTK_WINDOW(main_window), _("Não conseguiu exibir o arquivo!"));
 		return FALSE;
 	}
@@ -761,7 +761,7 @@ static gboolean salvar_arquivo_como(const gchar *nome_arquivo, gpointer data)
 		return FALSE;
 	}
 
-	changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
+	changes_until_last_save = xchange_file_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
 	atualiza_titulo_janela(nome_arquivo);
@@ -781,7 +781,7 @@ static gboolean salvar_arquivo(gpointer data)
 {
 	limpa_barra_de_estado("Arquivo");
 
-	if (!xchange_save(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
+	if (!xchange_file_save(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv))))
 	{
 		perror(_("Salvando"));
 		showErrorMessage(GTK_WINDOW(main_window), _("Erro ao salvar.\nExperimente \"salvar como\" ou \"como cópia\"\n"));
@@ -789,7 +789,7 @@ static gboolean salvar_arquivo(gpointer data)
 	}
 
 	pipoca_na_barra_de_estado("Arquivo", _("Arquivo salvo."));
-	changes_until_last_save = xchange_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
+	changes_until_last_save = xchange_file_get_undo_list_size(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)));
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 
 	return TRUE;
@@ -816,7 +816,7 @@ G_MODULE_EXPORT void on_action_salvar_copia_activate(GtkAction *action,
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 
 		char *filename_decoded = g_locale_from_utf8(filename, -1, NULL, NULL, NULL);
-		xchange_save_copy_as(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)),
+		xchange_file_save_copy_as(xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)),
 				filename_decoded);
 		g_free(filename_decoded);
 
@@ -1735,9 +1735,9 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 	// Busca enfim
 	off_t achou;// = funcao_localizar(from, 0, bytes_chave, tamanho_bytes, xf);
 	if (localizar->localizando_proximo)
-		achou = xchange_find(xf, from, localizar->fim, bytes_chave, tamanho_bytes);
+		achou = xchange_file_find(xf, from, localizar->fim, bytes_chave, tamanho_bytes);
 	else
-		achou = xchange_find_backwards(xf, localizar->inicio, from, bytes_chave, tamanho_bytes);
+		achou = xchange_file_find_backwards(xf, localizar->inicio, from, bytes_chave, tamanho_bytes);
 	// Não encontrou: tentar de novo?
 	if (achou == (off_t) -1 && permitir_reiniciar_intervalo)
 	{
@@ -1747,15 +1747,15 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 			if (localizar->inicio != from)
 			{
 				// Se o fim da busca é o fim do arquivo
-				if (localizar->fim == 0 || localizar->fim >= xchange_get_size(xf)-1)
+				if (localizar->fim == 0 || localizar->fim >= xchange_file_get_size(xf)-1)
 				{
 					if (showYesNoDialog(GTK_WINDOW(main_window), _("A busca alcançou o fim do arquivo e não localizou a sequência.\nDeseja buscar a partir do início do arquivo?")) == GTK_RESPONSE_YES)
-						achou = xchange_find(xf, 0, 0, bytes_chave, tamanho_bytes);
+						achou = xchange_file_find(xf, 0, 0, bytes_chave, tamanho_bytes);
 				}
 				else
 				{
 					if (showYesNoDialog(GTK_WINDOW(main_window), _("A busca alcançou o fim do intervalo e não localizou a sequência.\nDeseja buscar a partir do início do intervalo?")) == GTK_RESPONSE_YES)
-						achou = xchange_find(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
+						achou = xchange_file_find(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
 				}
 			}
 		}
@@ -1763,17 +1763,17 @@ static gboolean localiza_outro(off_t from, const XChangeFile *xf, const struct D
 		{
 			// Localizando anterior
 			// Se deslocou-se alguma vez e não está mais no fim
-			if (from < localizar->fim || (localizar->fim == 0 && from < xchange_get_size(xf) -1))
+			if (from < localizar->fim || (localizar->fim == 0 && from < xchange_file_get_size(xf) -1))
 			{
-				if (localizar->inicio == 0 && (localizar->fim == 0 || localizar->fim == xchange_get_size(xf) -1))
+				if (localizar->inicio == 0 && (localizar->fim == 0 || localizar->fim == xchange_file_get_size(xf) -1))
 				{
 					if (showYesNoDialog(GTK_WINDOW(main_window), _("A busca alcançou o começo do arquivo e não localizou a sequência.\nDeseja buscar a partir do fim do arquivo?")) == GTK_RESPONSE_YES)
-						achou = xchange_find_backwards(xf, 0, xchange_get_size(xf) - 1, bytes_chave, tamanho_bytes);
+						achou = xchange_file_find_backwards(xf, 0, xchange_file_get_size(xf) - 1, bytes_chave, tamanho_bytes);
 				}
 				else
 				{
 					if (showYesNoDialog(GTK_WINDOW(main_window), _("A busca alcançou o começo do intervalo e não localizou a sequência.\nDeseja buscar a partir do fim do intervalo?")) == GTK_RESPONSE_YES)
-						achou = xchange_find_backwards(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
+						achou = xchange_file_find_backwards(xf, localizar->inicio, localizar->fim, bytes_chave, tamanho_bytes);
 				}
 			}
 		}
@@ -1881,7 +1881,7 @@ void on_action_localizar_anterior_activate(GtkAction *action, gpointer data)
 	}
 	else
 		if (posicao_cursor == 0)
-			posicao_cursor = xchange_get_size(xf);
+			posicao_cursor = xchange_file_get_size(xf);
 		else
 			posicao_cursor -= 1;
 	localiza_outro(posicao_cursor, xf, &dados_localizar, TRUE);
@@ -2271,7 +2271,7 @@ static void mudou_posicao_cursor(XChangeHexView *hexv, gpointer data)
 {
 	GtkAdjustment *adj;
 	off_t pos_cursor = xchange_hex_view_get_cursor(hexv);
-	size_t max_pos_cursor = xchange_get_size(xchange_hex_view_get_file(hexv));
+	size_t max_pos_cursor = xchange_file_get_size(xchange_hex_view_get_file(hexv));
 	adj = gtk_spin_button_get_adjustment(GTK_SPIN_BUTTON(spinbutton_cursor));
 	gtk_adjustment_set_upper(adj, max_pos_cursor - 1);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spinbutton_cursor), pos_cursor);
@@ -2312,13 +2312,13 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data)
 	Filehandler *fh = data; // TODO: Mudar para dados dos aplicativos
 
 	const XChangeFile *xf = xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv));
-	gtk_action_set_sensitive(action_undo, xchange_has_undo(xf));
-	gtk_action_set_sensitive(action_redo, xchange_has_redo(xf));
+	gtk_action_set_sensitive(action_undo, xchange_file_has_undo(xf));
+	gtk_action_set_sensitive(action_redo, xchange_file_has_redo(xf));
 
 
 	limpa_barra_de_estado("Arquivo");
 
-	if (changes_until_last_save == xchange_get_undo_list_size(xf))
+	if (changes_until_last_save == xchange_file_get_undo_list_size(xf))
 	{
 		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 		filehandler_file_changed(fh, FALSE);

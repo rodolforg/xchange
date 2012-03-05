@@ -14,7 +14,7 @@
 // Decidir limite de memória
 size_t MAXFULLFILEBUFFERSIZE=30*1024*1024;
 
-void xchange_set_max_memory_size(size_t memsize)
+void xchange_file_set_max_memory_size(size_t memsize)
 {
 	MAXFULLFILEBUFFERSIZE = memsize;
 }
@@ -157,7 +157,7 @@ struct XChangeFile
 	FileAction * history_redo;
 };
 
-XChangeFile * xchange_open(const char *path, const char *mode)
+XChangeFile * xchange_file_open(const char *path, const char *mode)
 {
 	FILE *f = NULL;
 	if (path != NULL)
@@ -279,7 +279,7 @@ XChangeFile * xchange_open(const char *path, const char *mode)
 	return xf;
 }
 
-void xchange_close(XChangeFile * xfile)
+void xchange_file_close(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return;
@@ -419,7 +419,7 @@ static int xchange_save_bytes(const XChangeFile * xfile, FILE *f)
 }
 
 
-int xchange_save(const XChangeFile * xfile)
+int xchange_file_save(const XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return 0;
@@ -429,7 +429,7 @@ int xchange_save(const XChangeFile * xfile)
 		fprintf(stderr, "For the moment, it's unsafe save it by overwriting. Use save as or save copy instead.\n");
 		return 0;
 	}
-	if (!xchange_check_sanity(xfile))
+	if (!xchange_file_check_sanity(xfile))
 	{
 		return 0;
 	}
@@ -437,7 +437,7 @@ int xchange_save(const XChangeFile * xfile)
 	return xchange_save_bytes(xfile, xfile->f);
 }
 
-int xchange_save_copy_as(const XChangeFile * xfile, const char *path)
+int xchange_file_save_copy_as(const XChangeFile * xfile, const char *path)
 {
 	if (xfile == NULL || path == NULL)
 		return 0;
@@ -451,7 +451,7 @@ int xchange_save_copy_as(const XChangeFile * xfile, const char *path)
 	return resp;
 }
 
-int xchange_save_as(XChangeFile * xfile, const char *path)
+int xchange_file_save_as(XChangeFile * xfile, const char *path)
 {
 	if (xfile == NULL || path == NULL)
 		return 0;
@@ -488,7 +488,7 @@ int xchange_save_as(XChangeFile * xfile, const char *path)
 }
 
 // TODO: Se from e until estiverem na mesma seção e ela for na memória, não precisa duplicar na memória...
-off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uint8_t *key, size_t key_length)
+off_t xchange_file_find(const XChangeFile * xfile, off_t from, off_t until, const uint8_t *key, size_t key_length)
 {
 	const size_t BUFFER_SIZE = 1024 * 1024;
 	off_t offset;
@@ -504,15 +504,15 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 	if (buffer == NULL)
 		return (off_t) -1;
 
-	if (until == 0 || until >= xchange_get_size(xfile)-1)
-		until = xchange_get_size(xfile)-1;
+	if (until == 0 || until >= xchange_file_get_size(xfile)-1)
+		until = xchange_file_get_size(xfile)-1;
 
 	for (offset = from; offset + key_length -1 <= until; offset += BUFFER_SIZE - key_length + 1)
 	{
 
 		int p;
 		size_t got;
-		got = xchange_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
+		got = xchange_file_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
 		if (got < key_length)
 			break;
 		size_t internal_limit = got-key_length;
@@ -534,7 +534,7 @@ off_t xchange_find(const XChangeFile * xfile, off_t from, off_t until, const uin
 	return achou;
 }
 
-off_t xchange_find_backwards(const XChangeFile * xfile, off_t from, off_t until, const uint8_t *key, size_t key_length)
+off_t xchange_file_find_backwards(const XChangeFile * xfile, off_t from, off_t until, const uint8_t *key, size_t key_length)
 {
 	const size_t BUFFER_SIZE = 1024 * 1024;
 	off_t offset;
@@ -550,8 +550,8 @@ off_t xchange_find_backwards(const XChangeFile * xfile, off_t from, off_t until,
 	if (buffer == NULL)
 		return (off_t) -1;
 
-	if (until == 0 || until >= xchange_get_size(xfile))
-		until = xchange_get_size(xfile) -1;
+	if (until == 0 || until >= xchange_file_get_size(xfile))
+		until = xchange_file_get_size(xfile) -1;
 
 	offset = until - from < BUFFER_SIZE ? from : until - BUFFER_SIZE;
 
@@ -559,7 +559,7 @@ off_t xchange_find_backwards(const XChangeFile * xfile, off_t from, off_t until,
 	{
 		int p;
 		size_t got;
-		got = xchange_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
+		got = xchange_file_get_bytes(xfile, offset, buffer, offset + BUFFER_SIZE  - 1 > until ? until - offset + 1 : BUFFER_SIZE);
 		if (got < key_length)
 			break;
 		size_t internal_limit = got-key_length;
@@ -612,14 +612,14 @@ static FileSection * search_section(const XChangeFile * xfile, off_t offset)
 	return section;
 }
 
-size_t xchange_get_size(const XChangeFile * xfile)
+size_t xchange_file_get_size(const XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return (size_t)-1;
 	return xfile->size;
 }
 
-size_t xchange_get_bytes(const XChangeFile * xfile, off_t offset, uint8_t *bytes, size_t size)
+size_t xchange_file_get_bytes(const XChangeFile * xfile, off_t offset, uint8_t *bytes, size_t size)
 {
 	FileSection * section;
 
@@ -1042,7 +1042,7 @@ static int xchange_do_insert_bytes(XChangeFile * xfile, off_t offset, const uint
 	return 1;
 }
 
-int xchange_insert_bytes(XChangeFile * xfile, off_t offset, const uint8_t *bytes, size_t size)
+int xchange_file_insert_bytes(XChangeFile * xfile, off_t offset, const uint8_t *bytes, size_t size)
 {
 	if (xfile == NULL)
 		return 0;
@@ -1182,7 +1182,7 @@ static int xchange_do_delete_bytes(XChangeFile * xfile, const off_t offset, size
 	return 1;
 }
 
-int xchange_delete_bytes(XChangeFile * xfile, off_t offset, size_t size)
+int xchange_file_delete_bytes(XChangeFile * xfile, off_t offset, size_t size)
 {
 	if (xfile == NULL || size == 0)
 		return 0;
@@ -1196,7 +1196,7 @@ int xchange_delete_bytes(XChangeFile * xfile, off_t offset, size_t size)
 		dados = malloc(size);
 		if (dados == NULL)
 			return 0;
-		xchange_get_bytes(xfile, offset, dados, size);
+		xchange_file_get_bytes(xfile, offset, dados, size);
 		a = malloc(sizeof(FileAction));
 		if (a == NULL)
 		{
@@ -1442,7 +1442,7 @@ static int xchange_do_replace_bytes(XChangeFile * xfile, const off_t offset, con
 	return 1;
 }
 
-int xchange_replace_bytes(XChangeFile * xfile, off_t offset, const uint8_t *bytes, size_t size)
+int xchange_file_replace_bytes(XChangeFile * xfile, off_t offset, const uint8_t *bytes, size_t size)
 {
 	if (xfile == NULL)
 		return 0;
@@ -1456,7 +1456,7 @@ int xchange_replace_bytes(XChangeFile * xfile, off_t offset, const uint8_t *byte
 		dados = malloc(size);
 		if (dados == NULL)
 			return 0;
-		tam = xchange_get_bytes(xfile, offset, dados, size);
+		tam = xchange_file_get_bytes(xfile, offset, dados, size);
 		if (tam != size)
 		{
 			uint8_t *d = realloc(dados, tam);
@@ -1499,7 +1499,7 @@ int xchange_replace_bytes(XChangeFile * xfile, off_t offset, const uint8_t *byte
 	return 1;
 }
 
-int xchange_check_sanity(const XChangeFile * xfile)
+int xchange_file_check_sanity(const XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return 0;
@@ -1542,7 +1542,7 @@ void xchange_dump_section(const XChangeFile *xf)
 	while (s!= NULL)
 	{
 		int t = s->size +1 < sizeof(b) ? s->size+1 : sizeof(b);
-		xchange_get_bytes(xf, s->offset,b, t);
+		xchange_file_get_bytes(xf, s->offset,b, t);
 		b[t-1] = 0;
 		printf("Seção [%s] (%lli - %zu): \"%s\"\n", s->type == XCF_SECTION_MEMORY? "memo" : "file",(long long int) s->offset, s->size, (char*)b);
 		s = s->next;
@@ -1567,7 +1567,7 @@ static int xchange_insert_undo(XChangeFile * xfile, FileAction *a)
 	return 1;
 }
 
-int xchange_undo(XChangeFile * xfile)
+int xchange_file_undo(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return 0;
@@ -1591,7 +1591,7 @@ int xchange_undo(XChangeFile * xfile)
 				uint8_t *data = malloc(a->size);
 				if (data == NULL)
 					return 0;
-				xchange_get_bytes(xfile, a->offset, data, a->size);
+				xchange_file_get_bytes(xfile, a->offset, data, a->size);
 				a->data = data;
 			}
 			if (!xchange_do_delete_bytes(xfile, a->offset, a->size))
@@ -1604,7 +1604,7 @@ int xchange_undo(XChangeFile * xfile)
 			uint8_t *data = malloc(a->size);
 			if (data == NULL)
 				return 0;
-			xchange_get_bytes(xfile, a->offset, data, a->size);
+			xchange_file_get_bytes(xfile, a->offset, data, a->size);
 
 			if (!xchange_do_replace_bytes(xfile, a->offset, a->data, a->size))
 			{
@@ -1627,7 +1627,7 @@ int xchange_undo(XChangeFile * xfile)
 	return 1;
 }
 
-int xchange_redo(XChangeFile * xfile)
+int xchange_file_redo(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return 0;
@@ -1655,7 +1655,7 @@ int xchange_redo(XChangeFile * xfile)
 			uint8_t *data = malloc(a->size);
 			if (data == NULL)
 				return 0;
-			xchange_get_bytes(xfile, a->offset, data, a->size);
+			xchange_file_get_bytes(xfile, a->offset, data, a->size);
 
 			if (!xchange_do_replace_bytes(xfile, a->offset, a->data, a->size))
 			{
@@ -1678,21 +1678,21 @@ int xchange_redo(XChangeFile * xfile)
 	return 1;
 }
 
-int xchange_has_undo(const XChangeFile * xfile)
+int xchange_file_has_undo(const XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return 0;
 	return xfile->history_undo != NULL;
 }
 
-int xchange_has_redo(const XChangeFile * xfile)
+int xchange_file_has_redo(const XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return 0;
 	return xfile->history_redo != NULL;
 }
 
-int xchange_get_undo_list_size(const XChangeFile * xfile)
+int xchange_file_get_undo_list_size(const XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return 0;
@@ -1723,7 +1723,7 @@ int xchange_has_redo_list_size(const XChangeFile * xfile)
 }
 
 
-void xchange_clear_history(XChangeFile * xfile)
+void xchange_file_clear_history(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return;
@@ -1734,7 +1734,7 @@ void xchange_clear_history(XChangeFile * xfile)
 	xfile->history_redo = NULL;
 }
 
-void xchange_enable_history(XChangeFile * xfile, int enable)
+void xchange_file_enable_history(XChangeFile * xfile, int enable)
 {
 	if (xfile == NULL)
 		return;
@@ -1743,7 +1743,7 @@ void xchange_enable_history(XChangeFile * xfile, int enable)
 		xfile->use_history = 1;
 	else
 	{
-		xchange_clear_history(xfile);
+		xchange_file_clear_history(xfile);
 		xfile->use_history = 0;
 	}
 }
@@ -1756,7 +1756,7 @@ void xchange_enable_history(XChangeFile * xfile, int enable)
 // File navigation
 /////////////////////////
 
-int xchange_seek(XChangeFile * xfile, off_t offset, SeekBase base)
+int xchange_file_seek(XChangeFile * xfile, off_t offset, SeekBase base)
 {
 	if (xfile == NULL)
 		return 0;
@@ -1788,7 +1788,7 @@ int xchange_seek(XChangeFile * xfile, off_t offset, SeekBase base)
 	return 1;
 }
 
-off_t xchange_position(const XChangeFile * xfile)
+off_t xchange_file_position(const XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return (off_t) -1;
@@ -1796,57 +1796,57 @@ off_t xchange_position(const XChangeFile * xfile)
 }
 
 // Read data using native byte order
-int8_t xchange_readByte(XChangeFile * xfile)
+int8_t xchange_file_readByte(XChangeFile * xfile)
 {
-	return xchange_readUByte(xfile);
+	return xchange_file_readUByte(xfile);
 }
 
-int16_t xchange_readShort(XChangeFile * xfile);
-int32_t xchange_readInt(XChangeFile * xfile);
-int64_t xchange_readLong(XChangeFile * xfile);
-uint8_t xchange_readUByte(XChangeFile * xfile)
+int16_t xchange_file_readShort(XChangeFile * xfile);
+int32_t xchange_file_readInt(XChangeFile * xfile);
+int64_t xchange_file_readLong(XChangeFile * xfile);
+uint8_t xchange_file_readUByte(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return EOF;
 
 	uint8_t b;
-	if (!xchange_get_bytes(xfile, xfile->next_read, &b, 1))
+	if (!xchange_file_get_bytes(xfile, xfile->next_read, &b, 1))
 		return EOF;
 
 	xfile->next_read++;
 	return b;
 }
-uint16_t xchange_readUShort(XChangeFile * xfile)
+uint16_t xchange_file_readUShort(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return EOF;
 
 	uint16_t s;
-	if (!xchange_get_bytes(xfile, xfile->next_read, (uint8_t*)&s, 2))
+	if (!xchange_file_get_bytes(xfile, xfile->next_read, (uint8_t*)&s, 2))
 		return EOF;
 
 	xfile->next_read+=2;
 	return s;
 }
-uint32_t xchange_readUInt(XChangeFile * xfile)
+uint32_t xchange_file_readUInt(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return EOF;
 
 	uint32_t i;
-	if (!xchange_get_bytes(xfile, xfile->next_read, (uint8_t*)&i, 4))
+	if (!xchange_file_get_bytes(xfile, xfile->next_read, (uint8_t*)&i, 4))
 		return EOF;
 
 	xfile->next_read+=4;
 	return i;
 }
-uint64_t xchange_readULong(XChangeFile * xfile)
+uint64_t xchange_file_readULong(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return EOF;
 
 	uint64_t l;
-	if (!xchange_get_bytes(xfile, xfile->next_read, (uint8_t*)&l, 8))
+	if (!xchange_file_get_bytes(xfile, xfile->next_read, (uint8_t*)&l, 8))
 		return EOF;
 
 	xfile->next_read+=8;
@@ -1860,7 +1860,7 @@ static int64_t read_ULEbytes(XChangeFile * xfile, int number)
 		return EOF;
 
 	uint8_t b[8];
-	if (!xchange_get_bytes(xfile, xfile->next_read, b, number))
+	if (!xchange_file_get_bytes(xfile, xfile->next_read, b, number))
 		return EOF;
 
 	xfile->next_read+=number;
@@ -1883,7 +1883,7 @@ static int64_t read_UBEbytes(XChangeFile * xfile, int number)
 		return EOF;
 
 	uint8_t b[8];
-	if (!xchange_get_bytes(xfile, xfile->next_read, b, number))
+	if (!xchange_file_get_bytes(xfile, xfile->next_read, b, number))
 		return EOF;
 
 	xfile->next_read+=number;
@@ -1900,38 +1900,38 @@ static int64_t read_UBEbytes(XChangeFile * xfile, int number)
 	return answer;
 }
 
-int16_t xchange_readLEShort(XChangeFile * xfile);
-int32_t xchange_readLEInt(XChangeFile * xfile);
-int64_t xchange_readLELong(XChangeFile * xfile);
-uint16_t xchange_readLEUShort(XChangeFile * xfile)
+int16_t xchange_file_readLEShort(XChangeFile * xfile);
+int32_t xchange_file_readLEInt(XChangeFile * xfile);
+int64_t xchange_file_readLELong(XChangeFile * xfile);
+uint16_t xchange_file_readLEUShort(XChangeFile * xfile)
 {
 	return read_ULEbytes(xfile, 2);
 }
 
-uint32_t xchange_readLEUInt(XChangeFile * xfile)
+uint32_t xchange_file_readLEUInt(XChangeFile * xfile)
 {
 	return read_ULEbytes(xfile, 4);
 }
-uint64_t xchange_readLEULong(XChangeFile * xfile)
+uint64_t xchange_file_readLEULong(XChangeFile * xfile)
 {
 	return read_ULEbytes(xfile, 8);
 }
 
 // Read data using big-endian byte order
-int16_t xchange_readBEShort(XChangeFile * xfile);
-int32_t xchange_readBEInt(XChangeFile * xfile);
-int64_t xchange_readBELong(XChangeFile * xfile);
-uint16_t xchange_readBEUShort(XChangeFile * xfile)
+int16_t xchange_file_readBEShort(XChangeFile * xfile);
+int32_t xchange_file_readBEInt(XChangeFile * xfile);
+int64_t xchange_file_readBELong(XChangeFile * xfile);
+uint16_t xchange_file_readBEUShort(XChangeFile * xfile)
 {
 	return read_UBEbytes(xfile, 2);
 }
 
-uint32_t xchange_readBEUInt(XChangeFile * xfile)
+uint32_t xchange_file_readBEUInt(XChangeFile * xfile)
 {
 	return read_UBEbytes(xfile, 4);
 }
 
-uint64_t xchange_readBEULong(XChangeFile * xfile)
+uint64_t xchange_file_readBEULong(XChangeFile * xfile)
 {
 	return read_UBEbytes(xfile, 8);
 }
