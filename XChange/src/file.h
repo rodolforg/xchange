@@ -1,6 +1,38 @@
 /**
  * @file file.h
  * @brief Handle files easier than via standard FILE
+ *
+ * XChangeFile can be used for an easy file edition.
+ * \code
+ * uint8_t *data = ...;
+ * int data_len = ...;
+ * uint8_t *header = ...;
+ * int header_len = ...;
+ *
+ * XChangeFile *xf = xchange_file_open("path/myfile", "rb+");
+ * if (!xf)
+ * {
+ * 	fprintf(stderr, "Couldn't open file!\n");
+ * 	return 0;
+ * }
+ * if (!xchange_file_insert_bytes(xf, 0, header, header_len))
+ * {
+ * 	fprintf(stderr, "Couldn't insert data!\n");
+ * 	return 0;
+ * }
+ * if (!xchange_file_replace_bytes(xf, 0x1500, data, data_len))
+ * {
+ * 	fprintf(stderr, "Couldn't replace data!\n");
+ * 	return 0;
+ * }
+ * if(!xchange_file_save(xf))
+ * {
+ * 	fprintf(stderr, "Couldn't save file!!\n");
+ * 	return 0;
+ * }
+ * xchange_file_close(xf);
+ * return 1;
+ * \endcode
  */
 /***************************************************************************
  *            file.h
