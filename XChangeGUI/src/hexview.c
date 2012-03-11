@@ -825,7 +825,7 @@ static gchar *replace_null_char(const XChangeHexView *hexv, const char *texto, i
 			novo_comprimento+=comprimento_null - 1;
 
 	// Aloca espaço para o novo texto
-	novo_texto = g_try_malloc0(novo_comprimento+1);
+	novo_texto = g_try_malloc(novo_comprimento+1);
 	if (novo_texto == NULL)
 		return NULL;
 
@@ -841,6 +841,7 @@ static gchar *replace_null_char(const XChangeHexView *hexv, const char *texto, i
 		else
 			novo_texto[d++] = texto[n];
 	}
+	novo_texto[d] = 0; // Fim de string
 
 	if (new_length != NULL)
 		*new_length = novo_comprimento+1;
@@ -2200,7 +2201,7 @@ static void miniedition_convert_text_bytes_(GtkTextBuffer *text_buffer, gpointer
 
 	if (tamanho_bytes > 0)
 	{
-		gchar *texto_bytes = g_malloc0(tamanho_bytes*3+1);
+		gchar *texto_bytes = g_malloc(tamanho_bytes*3+1);
 		int c;
 		for (c = 0; c < tamanho_bytes; c++)
 		{
@@ -2209,6 +2210,7 @@ static void miniedition_convert_text_bytes_(GtkTextBuffer *text_buffer, gpointer
 			else
 				sprintf(texto_bytes+c*3, "%02hhX\n", bytes[c]);
 		}
+		texto_bytes[c*3] = 0; // Fim de string
 
 		//gtk_label_set_text(label, texto_bytes);
 		char *saida = g_markup_printf_escaped("<small>%s</small>", texto_bytes);

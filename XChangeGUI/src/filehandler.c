@@ -18,7 +18,7 @@
 // Allocate and initialize a Filehandler structure
 Filehandler *filehandler_new(FilehandlerCallbacks *callbacks, GtkWidget *main_window, gpointer user_data)
 {
-	Filehandler *fh = g_new0(Filehandler, 1);
+	Filehandler *fh = g_malloc0(sizeof(Filehandler));
 	if (fh == NULL)
 		return NULL;
 	fh->file_changes_saved = TRUE;
