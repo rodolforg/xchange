@@ -45,9 +45,14 @@
 #ifndef HEXCHANGE_FILE_H
 #define HEXCHANGE_FILE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <sys/types.h>
 
+struct XChangeFile;
 /**
  * The obfuscated file handler.
  */
@@ -493,5 +498,9 @@ void xchange_file_enable_history(XChangeFile * xfile, int enable);
  * @return 1 if xfile is sane. 0 otherwise.
  */
 int xchange_file_check_sanity(const XChangeFile * xfile);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //HEXCHANGE_FILE_H

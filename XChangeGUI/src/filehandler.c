@@ -162,7 +162,7 @@ static gboolean do_open_file(Filehandler *fh, const gchar *filename)
 	fh->file_changes_saved = TRUE;
 
 	if (fh->actions.save != NULL)
-		gtk_action_set_sensitive(fh->actions.save, TRUE);
+		gtk_action_set_sensitive(fh->actions.save, FALSE);
 	if (fh->actions.save_as != NULL)
 		gtk_action_set_sensitive(fh->actions.save_as, TRUE);
 	if (fh->actions.close != NULL)
