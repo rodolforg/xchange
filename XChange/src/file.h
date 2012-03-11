@@ -488,6 +488,13 @@ void xchange_file_clear_history(XChangeFile * xfile);
  */
 void xchange_file_enable_history(XChangeFile * xfile, int enable);
 /**
+ * Check if the file modification history is enabled.
+ * @param[in] xfile The file handler
+ * @return 1 if it is enabled, 0 if not.
+ */
+int xchange_file_is_history_enabled(const XChangeFile * xfile);
+
+/**
  * Check if the file modifications does not corrupt the file itself.
  *
  * If it fails, xchange_file_save() cannot be performed because it is unsafe.

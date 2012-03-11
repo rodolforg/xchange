@@ -1748,7 +1748,12 @@ void xchange_file_enable_history(XChangeFile * xfile, int enable)
 	}
 }
 
-
+int xchange_file_is_history_enabled(const XChangeFile * xfile)
+{
+	if (xfile == NULL)
+		return 0;
+	return xfile->use_history;
+}
 
 
 
