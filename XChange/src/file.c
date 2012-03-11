@@ -1707,7 +1707,7 @@ int xchange_file_get_undo_list_size(const XChangeFile * xfile)
 	return size;
 }
 
-int xchange_has_redo_list_size(const XChangeFile * xfile)
+int xchange_file_get_redo_list_size(const XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return 0;
