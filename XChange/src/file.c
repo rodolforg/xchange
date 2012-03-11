@@ -1803,15 +1803,27 @@ off_t xchange_file_position(const XChangeFile * xfile)
 }
 
 // Read data using native byte order
-int8_t xchange_file_readByte(XChangeFile * xfile)
+int8_t xchange_file_read_byte(XChangeFile * xfile)
 {
-	return xchange_file_readUByte(xfile);
+	return xchange_file_read_ubyte(xfile);
 }
 
-int16_t xchange_file_readShort(XChangeFile * xfile);
-int32_t xchange_file_readInt(XChangeFile * xfile);
-int64_t xchange_file_readLong(XChangeFile * xfile);
-uint8_t xchange_file_readUByte(XChangeFile * xfile)
+int16_t xchange_file_read_short(XChangeFile * xfile)
+{
+	return xchange_file_read_ushort(xfile);
+}
+
+int32_t xchange_file_read_int(XChangeFile * xfile)
+{
+	return xchange_file_read_uint(xfile);
+}
+
+int64_t xchange_file_read_long(XChangeFile * xfile)
+{
+	return xchange_file_read_ulong(xfile);
+}
+
+uint8_t xchange_file_read_ubyte(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return EOF;
@@ -1823,7 +1835,7 @@ uint8_t xchange_file_readUByte(XChangeFile * xfile)
 	xfile->next_read++;
 	return b;
 }
-uint16_t xchange_file_readUShort(XChangeFile * xfile)
+uint16_t xchange_file_read_ushort(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return EOF;
@@ -1835,7 +1847,7 @@ uint16_t xchange_file_readUShort(XChangeFile * xfile)
 	xfile->next_read+=2;
 	return s;
 }
-uint32_t xchange_file_readUInt(XChangeFile * xfile)
+uint32_t xchange_file_read_uint(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return EOF;
@@ -1847,7 +1859,7 @@ uint32_t xchange_file_readUInt(XChangeFile * xfile)
 	xfile->next_read+=4;
 	return i;
 }
-uint64_t xchange_file_readULong(XChangeFile * xfile)
+uint64_t xchange_file_read_ulong(XChangeFile * xfile)
 {
 	if (xfile == NULL)
 		return EOF;
@@ -1907,38 +1919,58 @@ static int64_t read_UBEbytes(XChangeFile * xfile, int number)
 	return answer;
 }
 
-int16_t xchange_file_readLEShort(XChangeFile * xfile);
-int32_t xchange_file_readLEInt(XChangeFile * xfile);
-int64_t xchange_file_readLELong(XChangeFile * xfile);
-uint16_t xchange_file_readLEUShort(XChangeFile * xfile)
+int16_t xchange_file_read_le_short(XChangeFile * xfile)
+{
+	return xchange_file_read_le_ushort(xfile);
+}
+int32_t xchange_file_read_le_int(XChangeFile * xfile)
+{
+	return xchange_file_read_le_uint(xfile);
+}
+int64_t xchange_file_read_le_long(XChangeFile * xfile)
+{
+	return xchange_file_read_le_ulong(xfile);
+}
+
+uint16_t xchange_file_read_le_ushort(XChangeFile * xfile)
 {
 	return read_ULEbytes(xfile, 2);
 }
 
-uint32_t xchange_file_readLEUInt(XChangeFile * xfile)
+uint32_t xchange_file_read_le_uint(XChangeFile * xfile)
 {
 	return read_ULEbytes(xfile, 4);
 }
-uint64_t xchange_file_readLEULong(XChangeFile * xfile)
+uint64_t xchange_file_read_le_ulong(XChangeFile * xfile)
 {
 	return read_ULEbytes(xfile, 8);
 }
 
 // Read data using big-endian byte order
-int16_t xchange_file_readBEShort(XChangeFile * xfile);
-int32_t xchange_file_readBEInt(XChangeFile * xfile);
-int64_t xchange_file_readBELong(XChangeFile * xfile);
-uint16_t xchange_file_readBEUShort(XChangeFile * xfile)
+int16_t xchange_file_read_be_short(XChangeFile * xfile)
+{
+	return xchange_file_read_be_ushort(xfile);
+}
+
+int32_t xchange_file_read_be_int(XChangeFile * xfile)
+{
+	return xchange_file_read_be_uint(xfile);
+}
+int64_t xchange_file_read_be_long(XChangeFile * xfile)
+{
+	return xchange_file_read_be_ulong(xfile);
+}
+uint16_t xchange_file_read_be_ushort(XChangeFile * xfile)
 {
 	return read_UBEbytes(xfile, 2);
 }
 
-uint32_t xchange_file_readBEUInt(XChangeFile * xfile)
+uint32_t xchange_file_read_be_uint(XChangeFile * xfile)
 {
 	return read_UBEbytes(xfile, 4);
 }
 
-uint64_t xchange_file_readBEULong(XChangeFile * xfile)
+uint64_t xchange_file_read_be_ulong(XChangeFile * xfile)
 {
 	return read_UBEbytes(xfile, 8);
 }

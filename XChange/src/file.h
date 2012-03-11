@@ -109,34 +109,217 @@ typedef enum
 	XC_SEEK_CUR, ///< Seek from current file position
 	XC_SEEK_END, ///< Seek from file end
 } SeekBase;
+
+/**
+ * Go to a file offset.
+ *
+ * The offset can be absolute (by using XC_SEEK_SET) or relative (by using XC_SEEK_CUR).
+ * If it is a relative displacement, offset argument can be negative.
+ * If it is a seek from end of file, offset must be negative.
+ *
+ * This function is useful for file data readings with xchange_file_read_*() functions.
+ * @param[in] xfile The file handler.
+ * @param offset How much to displace the cursor in file.
+ * @param base Where to seek from.
+ * @return 1 on success, 0 otherwise. The function fails if offset gives an invalid value or xfile is invalid.
+ */
 int xchange_file_seek(XChangeFile * xfile, off_t offset, SeekBase base);
+
+/**
+ * Get the current file position used for xchange_file_read_*() functions.
+ *
+ * The file position is changed by xchange_file_seek() or xchange_file_read_*() calls.
+ *
+ * @param[in] xfile The file handler.
+ * @return The current file position or -1 on failure (xfile is invalid).
+ */
 off_t xchange_file_position(const XChangeFile * xfile);
 
 // Read data using native byte order
-int8_t xchange_file_readByte(XChangeFile * xfile);
-int16_t xchange_file_readShort(XChangeFile * xfile);
-int32_t xchange_file_readInt(XChangeFile * xfile);
-int64_t xchange_file_readLong(XChangeFile * xfile);
-uint8_t xchange_file_readUByte(XChangeFile * xfile);
-uint16_t xchange_file_readUShort(XChangeFile * xfile);
-uint32_t xchange_file_readUInt(XChangeFile * xfile);
-uint64_t xchange_file_readULong(XChangeFile * xfile);
+/**
+ * Get a byte from file at current file position.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read byte.
+ */
+int8_t xchange_file_read_byte(XChangeFile * xfile);
+/**
+ * Get a 16-bit integer from file at current file position. It uses native byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 16-bit integer.
+ */
+int16_t xchange_file_read_short(XChangeFile * xfile);
+/**
+ * Get a 32-bit integer from file at current file position. It uses native byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 32-bit integer.
+ */
+int32_t xchange_file_read_int(XChangeFile * xfile);
+/**
+ * Get a 64-bit integer from file at current file position. It uses native byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 64-bit integer.
+ */
+int64_t xchange_file_read_long(XChangeFile * xfile);
+/**
+ * Get an unsigned byte from file at current file position.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read unsigned byte.
+ */
+uint8_t xchange_file_read_ubyte(XChangeFile * xfile);
+/**
+ * Get a 16-bit unsigned integer from file at current file position. It uses native byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read unsigned 16-bit integer.
+ */
+uint16_t xchange_file_read_ushort(XChangeFile * xfile);
+/**
+ * Get a 32-bit unsigned integer from file at current file position. It uses native byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read unsigned 32-bit integer.
+ */
+uint32_t xchange_file_read_uint(XChangeFile * xfile);
+/**
+ * Get a 64-bit unsigned integer from file at current file position. It uses native byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read unsigned 64-bit integer.
+ */
+uint64_t xchange_file_read_ulong(XChangeFile * xfile);
 
 // Read data using little-endian byte order
-int16_t xchange_file_readLEShort(XChangeFile * xfile);
-int32_t xchange_file_readLEInt(XChangeFile * xfile);
-int64_t xchange_file_readLELong(XChangeFile * xfile);
-uint16_t xchange_file_readLEUShort(XChangeFile * xfile);
-uint32_t xchange_file_readLEUInt(XChangeFile * xfile);
-uint64_t xchange_file_readLEULong(XChangeFile * xfile);
+/**
+ * Get a 16-bit integer from file at current file position. It uses little-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 16-bit integer.
+ */
+int16_t xchange_file_read_le_short(XChangeFile * xfile);
+/**
+ * Get a 32-bit integer from file at current file position. It uses little-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 32-bit integer.
+ */
+int32_t xchange_file_read_le_int(XChangeFile * xfile);
+/**
+ * Get a 64-bit integer from file at current file position. It uses little-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 64-bit integer.
+ */
+int64_t xchange_file_read_le_long(XChangeFile * xfile);
+/**
+ * Get a 16-bit unsigned integer from file at current file position. It uses little-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 16-bit unsigned integer.
+ */
+uint16_t xchange_file_read_le_ushort(XChangeFile * xfile);
+/**
+ * Get a 32-bit unsigned integer from file at current file position. It uses little-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 32-bit unsigned integer.
+ */
+uint32_t xchange_file_read_le_uint(XChangeFile * xfile);
+/**
+ * Get a 64-bit unsigned integer from file at current file position. It uses little-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 64-bit unsigned integer.
+ */
+uint64_t xchange_file_read_le_ulong(XChangeFile * xfile);
 
 // Read data using big-endian byte order
-int16_t xchange_file_readBEShort(XChangeFile * xfile);
-int32_t xchange_file_readBEInt(XChangeFile * xfile);
-int64_t xchange_file_readBELong(XChangeFile * xfile);
-uint16_t xchange_file_readBEUShort(XChangeFile * xfile);
-uint32_t xchange_file_readBEUInt(XChangeFile * xfile);
-uint64_t xchange_file_readBEULong(XChangeFile * xfile);
+/**
+ * Get a 16-bit integer from file at current file position. It uses big-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 16-bit integer.
+ */
+int16_t xchange_file_read_be_short(XChangeFile * xfile);
+/**
+ * Get a 32-bit integer from file at current file position. It uses big-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 32-bit integer.
+ */
+int32_t xchange_file_read_be_int(XChangeFile * xfile);
+/**
+ * Get a 64-bit integer from file at current file position. It uses big-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 64-bit integer.
+ */
+int64_t xchange_file_read_be_long(XChangeFile * xfile);
+/**
+ * Get a 16-bit unsigned integer from file at current file position. It uses big-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 16-bit unsigned integer.
+ */
+uint16_t xchange_file_read_be_ushort(XChangeFile * xfile);
+/**
+ * Get a 32-bit unsigned integer from file at current file position. It uses big-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 32-bit unsigned integer.
+ */
+uint32_t xchange_file_read_be_uint(XChangeFile * xfile);
+/**
+ * Get a 64-bit unsigned integer from file at current file position. It uses big-endian as byte ordering.
+ *
+ * The current position can be known by using xchange_file_position().
+ * It can be changed by xchange_file_seek() or successive xchange_file_read_*()'ings.
+ * @param xfile The file handler.
+ * @return The read 64-bit unsigned integer.
+ */
+uint64_t xchange_file_read_be_ulong(XChangeFile * xfile);
 
 // File modifications
 
