@@ -2319,7 +2319,8 @@ static void mudou_conteudo(XChangeHexView *hexv, gpointer data)
 
 	limpa_barra_de_estado("Arquivo");
 
-	if (xchange_file_has_undo(xf) && changes_until_last_save == xchange_file_get_undo_list_size(xf))
+	if ( (xchange_file_is_history_enabled(xf) && changes_until_last_save == xchange_file_get_undo_list_size(xf))
+			|| xchange_hex_view_get_file(XCHANGE_HEX_VIEW(hexv)) == NULL)
 	{
 		gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
 		filehandler_file_changed(fh, FALSE);
