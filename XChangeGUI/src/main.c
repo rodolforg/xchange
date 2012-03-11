@@ -729,6 +729,7 @@ static gboolean abre_arquivo(const char *nome_arquivo, gpointer data)
 
 	changes_until_last_save = 0;
 	gtk_label_set_text(GTK_LABEL(label_arquivo_modificado), " ");
+	xchange_file_enable_history(xf, 1);
 
 	atualiza_titulo_janela(nome_arquivo);
 
