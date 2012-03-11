@@ -1765,7 +1765,10 @@ int xchange_file_seek(XChangeFile * xfile, off_t offset, SeekBase base)
 	{
 		case SEEK_CUR:
 		{
-			if (xfile->next_read + offset >= xfile->size)
+			off_t o = xfile->next_read + offset;
+			if (o >= xfile->size)
+				return 0;
+			if (o < 0)
 				return 0;
 			xfile->next_read = offset;
 			break;
@@ -1774,12 +1777,16 @@ int xchange_file_seek(XChangeFile * xfile, off_t offset, SeekBase base)
 		{
 			if (offset >= xfile->size)
 				return 0;
+			if (offset < 0)
+				return 0;
 			xfile->next_read = offset;
 			break;
 		}
 		case SEEK_END:
 		{
 			if (offset > 0)
+				return 0;
+			if (offset < -xfile->size)
 				return 0;
 			xfile->next_read = xfile->size + offset;
 			break;
