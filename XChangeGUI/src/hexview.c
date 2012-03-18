@@ -1828,8 +1828,13 @@ static gboolean xchange_hex_view_button_press(GtkWidget *widget,
 	{
 		if ((event->state & GDK_SHIFT_MASK) && event->button == 1)
 		{
+			if (hexv->selection_start == -1)
+			{
+				hexv->selection_start = cursor_inicial;
+			}
 			hexv->cursor_position = hexv->fileoffset + offset;
-			hexv->selection_end = -1;//hexv->cursor_position;
+			hexv->selection_end = hexv->cursor_position;
+			g_signal_emit_by_name(hexv, "selection-changed");
 		}
 		else if (event->button == 1)
 		{
