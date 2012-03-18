@@ -2313,6 +2313,12 @@ static gboolean miniedition_create(XChangeHexView* hexv)
 	{
 		const gchar *end = NULL;
 		gint valid_size = selected_size;
+		int new_selected_size;
+		gchar *temp_text = replace_null_char(hexv, selected_text, selected_size-1, &new_selected_size);
+		g_free(selected_text);
+		selected_size = new_selected_size;
+		selected_text = temp_text;
+
 		if (!g_utf8_validate(selected_text, selected_size, &end))
 		{
 			if (end != NULL)
