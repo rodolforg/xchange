@@ -1255,7 +1255,7 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 		if (read != NULL)
 			*read = min_read - inleft;
 		free(tmpbuffer);
-		return outbuf - text;
+		return outbuf - (text != NULL? text : tmpbuffer);
 	}
 
 	Entry *e;
