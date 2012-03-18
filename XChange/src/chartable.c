@@ -1134,6 +1134,38 @@ int xchange_table_print_stringUTF8(const XChangeTable *table,
 	return outpos;
 }
 
+int xchange_table_print_string(const XChangeTable *table, const uint8_t *bytes, size_t size, char *text)
+{
+	int utf8_size = xchange_table_print_stringUTF8(table, bytes, size, NULL);
+	if (utf8_size < 0)
+		return utf8_size;
+
+	char *text_utf8 = malloc(utf8_size);
+	if (text_utf8 == NULL)
+		return -1;
+
+	utf8_size = xchange_table_print_stringUTF8(table, bytes, size, text_utf8);
+	if (utf8_size < 0)
+	{
+		free(text_utf8);
+		return utf8_size;
+	}
+
+	XChangeTable * xt_native = xchange_table_create_from_encoding(table->encoding);
+	if (xt_native == NULL)
+	{
+		free(text_utf8);
+		return -1;
+	}
+
+	uint8_t *text_native = (uint8_t*)text;
+	int native_size = xchange_table_scan_stringUTF8(xt_native, text_utf8, utf8_size, text_native);
+	free(text_utf8);
+	xchange_table_close(xt_native);
+
+	return native_size;
+}
+
 int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t *bytes, size_t size, char *text, size_t min_read, size_t *read)
 {
 	if (table == NULL || bytes == NULL || size == 0 || min_read == 0)
@@ -1367,6 +1399,42 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 		}
 	}
 	return outpos;
+}
+
+int xchange_table_scan_string(const XChangeTable *table, const char *text, size_t size, uint8_t *bytes)
+{
+	if (table == NULL || text == NULL)
+		return -1;
+	XChangeTable *xt_native = xchange_table_create_from_encoding(table->encoding);
+	if (xt_native == NULL)
+		return -1;
+
+	int utf8_size = xchange_table_print_stringUTF8(xt_native, (uint8_t*)text, size, NULL);
+	if (utf8_size < 0)
+	{
+		xchange_table_close(xt_native);
+		return utf8_size;
+	}
+
+	char *text_utf8 = malloc(utf8_size);
+	if (text_utf8 == NULL)
+	{
+		xchange_table_close(xt_native);
+		return utf8_size;
+	}
+
+	utf8_size = xchange_table_print_stringUTF8(xt_native, (uint8_t*)text, size, text_utf8);
+	xchange_table_close(xt_native);
+
+	if (utf8_size < 0)
+	{
+		free(text_utf8);
+		return utf8_size;
+	}
+
+	int bytes_size = xchange_table_scan_stringUTF8(table, text_utf8, utf8_size, bytes);
+	free(text_utf8);
+	return bytes_size;
 }
 
 void xchange_table_dump_entries(XChangeTable *xt)

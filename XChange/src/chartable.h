@@ -136,6 +136,20 @@ const uint8_t* xchange_table_get_paragraph_markUTF8(XChangeTable *table, int *le
  */
 int xchange_table_print_stringUTF8(const XChangeTable *table, const uint8_t *bytes, size_t size, char *text);
 /**
+ * Convert a binary data into a character string.
+ * The output encode used is that one specified/detected on the loaded table file, or the specified one if it is a standard charset table type .
+ * The string will be written in "text" argument and it is NOT 0-terminated.
+ *
+ * If "text" argument is NULL, the function just compute the needed space for converted text.
+ *
+ * @param[in] table The table handler.
+ * @param[in] bytes The binary data array to be converted.
+ * @param size The data array size to be converted.
+ * @param[out] text A pre-allocated array to put the generated string, or NULL for just length computation.
+ * @return The output length (in bytes). -1 on error.
+ */
+int xchange_table_print_string(const XChangeTable *table, const uint8_t *bytes, size_t size, char *text);
+/**
  * Convert a UTF-8 encoded character string into a binary string.
  * The character string may not be NULL-terminated.
  *
@@ -148,6 +162,19 @@ int xchange_table_print_stringUTF8(const XChangeTable *table, const uint8_t *byt
  * @return The output length (in bytes). On error, return a number less than 0.
  */
 int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, size_t size, uint8_t *bytes);
+/**
+ * Convert a character string into a binary string.
+ * The character string may not be NULL-terminated and its encoding must be the same as the table.
+ *
+ * If the bytes array pointer is NULL, the function will just computed the needed space on it.
+ *
+ * @param[in] table The table handler.
+ * @param[in] text The string to be converted.
+ * @param size The text byte-size to be converted.
+ * @param[out] bytes A pre-allocated array to put the generated binary data, or NULL for just length computation.
+ * @return The output length (in bytes). On error, return a number less than 0.
+ */
+int xchange_table_scan_string(const XChangeTable *table, const char *text, size_t size, uint8_t *bytes);
 
 int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t *bytes, size_t size, char *text, size_t min_read, size_t *read);
 
