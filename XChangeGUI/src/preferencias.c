@@ -44,6 +44,8 @@ struct Janelas
 	GtkEntry *entry_caractere_para_nulo;
 	GtkEntry *entry_caractere_para_novalinha;
 	GtkEntry *entry_caractere_para_fimmensagem;
+	GtkEntry *entry_prefixo_byte_cru;
+	GtkEntry *entry_sufixo_byte_cru;
 };
 typedef struct Janelas Janelas;
 
@@ -101,6 +103,8 @@ void inicia_preferencias_padrao(Preferencias *preferencias)
 	preferencias->caractere_nulo = g_strdup("_");
 	preferencias->caractere_novalinha = g_strdup("⏎");
 	preferencias->caractere_fimmensagem = g_strdup("¶");
+	preferencias->prefixo_byte_cru = g_strdup("<$");
+	preferencias->sufixo_byte_cru = g_strdup(">");
 
 	dadosInternos.preferencias = preferencias;
 }
@@ -338,6 +342,12 @@ static void interpreta_preferencias(GKeyFile *keyfile, struct Preferencias * pre
 	// TODO: ativar caractere novalinha?
 	ler_preferencia_texto(keyfile, "Painel Texto", "Caractere fim de mensagem", &preferencias->caractere_fimmensagem);
 	// TODO: ativar caractere fim mensagem?
+	ler_preferencia_texto(keyfile, "Painel Texto", "Prefixo de byte cru", &preferencias->prefixo_byte_cru);
+	// TODO: ativar prefixo de byte cru?
+	ler_preferencia_texto(keyfile, "Painel Texto", "Sufixo de byte cru", &preferencias->sufixo_byte_cru);
+	if (! g_key_file_has_key (keyfile, "Painel Texto", "Sufixo de byte cru", NULL) )
+		preferencias->sufixo_byte_cru = NULL;
+	// TODO: ativar sufixo de byte cru?
 }
 
 void salva_preferencias_se_necessario()
@@ -445,6 +455,8 @@ void destroi_preferencias(Preferencias *preferencias)
 	g_free(preferencias->caractere_nulo);
 	g_free(preferencias->caractere_novalinha);
 	g_free(preferencias->caractere_fimmensagem);
+	g_free(preferencias->prefixo_byte_cru);
+	g_free(preferencias->sufixo_byte_cru);
 
 	g_key_file_free(dadosInternos.keyfile); // FIXME: Global? (dadosInternos)
 }
@@ -492,6 +504,8 @@ static gboolean carrega_dialogo_do_builder(struct ManipuladorPreferencias *dados
 	dados->janelas.entry_caractere_para_nulo = GTK_ENTRY(gtk_builder_get_object(builder, "entry_caractere_para_nulo"));
 	dados->janelas.entry_caractere_para_novalinha = GTK_ENTRY(gtk_builder_get_object(builder, "entry_caractere_para_novalinha"));
 	dados->janelas.entry_caractere_para_fimmensagem = GTK_ENTRY(gtk_builder_get_object(builder, "entry_caractere_para_fimmensagem"));
+	dados->janelas.entry_prefixo_byte_cru = GTK_ENTRY(gtk_builder_get_object(builder, "entry_prefixo_byte_cru"));
+	dados->janelas.entry_sufixo_byte_cru = GTK_ENTRY(gtk_builder_get_object(builder, "entry_sufixo_byte_cru"));
 
 	g_object_unref(builder);
 
@@ -540,6 +554,9 @@ static void configura_dialogo(const struct ManipuladorPreferencias *dados)
 	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_caractere_para_nulo), dados->preferencias->caractere_nulo);
 	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_caractere_para_novalinha), dados->preferencias->caractere_novalinha);
 	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_caractere_para_fimmensagem), dados->preferencias->caractere_fimmensagem);
+	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_prefixo_byte_cru), dados->preferencias->prefixo_byte_cru);
+	gtk_entry_set_text(GTK_ENTRY(dados->janelas.entry_sufixo_byte_cru), dados->preferencias->sufixo_byte_cru != NULL?
+			dados->preferencias->sufixo_byte_cru : "");
 
 }
 
@@ -1015,5 +1032,56 @@ void on_entry_caractere_para_fimmensagem_changed(GtkEntry *entry, gpointer data)
 	for (n = 0; n < qtd_tabelas; n++)
 		if (xt_tabela[n] != NULL)
 			xchange_table_set_paragraph_markUTF8(xt_tabela[n], valor, -1);
+	gtk_widget_queue_draw(dados->janelas.hexv);
+}
+
+void on_entry_prefixo_byte_cru_changed(GtkEntry *entry, gpointer data)
+{
+	struct ManipuladorPreferencias *dados = data;
+	const gchar *valor;
+
+	valor = gtk_entry_get_text(entry);
+	if (g_utf8_strlen(valor, -1)!=0)
+		g_key_file_set_string(dados->keyfile, "Painel Texto", "Prefixo de byte cru", valor);
+	else
+	{
+		g_key_file_remove_key(dados->keyfile, "Painel Texto", "Prefixo de byte cru", NULL);
+		valor = "<$";
+	}
+
+	g_free(dados->preferencias->prefixo_byte_cru);
+	dados->preferencias->prefixo_byte_cru = g_strdup(valor);
+
+	int n;
+	for (n = 0; n < qtd_tabelas; n++)
+		if (xt_tabela[n] != NULL)
+			xchange_table_set_byte_escape_patternUTF8(xt_tabela[n], valor, -1, dados->preferencias->sufixo_byte_cru, -1);
+	gtk_widget_queue_draw(dados->janelas.hexv);
+}
+
+void on_entry_sufixo_byte_cru_changed(GtkEntry *entry, gpointer data)
+{
+	struct ManipuladorPreferencias *dados = data;
+	const gchar *valor;
+
+	valor = gtk_entry_get_text(entry);
+	if (g_utf8_strlen(valor, -1)!=0)
+		g_key_file_set_string(dados->keyfile, "Painel Texto", "Sufixo de byte cru", valor);
+	else
+	{
+		g_key_file_remove_key(dados->keyfile, "Painel Texto", "Sufixo de byte cru", NULL);
+		valor = NULL;
+	}
+
+	g_free(dados->preferencias->sufixo_byte_cru);
+	if (valor != NULL)
+		dados->preferencias->sufixo_byte_cru = g_strdup(valor);
+	else
+		dados->preferencias->sufixo_byte_cru = NULL;
+
+	int n;
+	for (n = 0; n < qtd_tabelas; n++)
+		if (xt_tabela[n] != NULL)
+			xchange_table_set_byte_escape_patternUTF8(xt_tabela[n], dados->preferencias->prefixo_byte_cru, -1, valor, -1);
 	gtk_widget_queue_draw(dados->janelas.hexv);
 }

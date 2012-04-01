@@ -11,11 +11,11 @@
 #include <gtk/gtk.h>
 #include "hexview.h"
 
-// Ao adicionar um campo, iniciá-lo em inicia_preferencias_padrao.
-// Acrescentar a leitura em interpreta_preferencias
-// Configurar o diálogo de preferência em configura_dialogo
-// Verificar se precisa destruir em destroi_preferencias
-// Se for um estado a decorar, inserir código em salvar_preferencias
+// Ao adicionar um campo, iniciá-lo em inicia_preferencias_padrao().
+// Acrescentar a leitura em interpreta_preferencias()
+// Configurar o diálogo de preferência em configura_dialogo()
+// Verificar se precisa destruir em destroi_preferencias()
+// Se for um estado a decorar, inserir código em salvar_preferencias()
 typedef struct Preferencias
 {
 	// Arquivos
@@ -55,6 +55,8 @@ typedef struct Preferencias
 	gchar * caractere_nulo; // FIXME: Texto?!
 	gchar * caractere_novalinha; // FIXME: Texto?!
 	gchar * caractere_fimmensagem; // FIXME: Texto?!
+	gchar * prefixo_byte_cru; // FIXME: Texto?!
+	gchar * sufixo_byte_cru; // FIXME: Texto?!
 } Preferencias;
 
 void inicia_preferencias_padrao(Preferencias *preferencias);

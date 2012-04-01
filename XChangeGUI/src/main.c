@@ -960,6 +960,7 @@ static XChangeTable *carregar_tabela(const char *filename, const char *encoding)
 	xchange_table_set_unknown_charUTF8(xt, preferencias.caractere_desconhecido, -1);
 	xchange_table_set_lineend_markUTF8(xt, preferencias.caractere_novalinha, -1);
 	xchange_table_set_paragraph_markUTF8(xt, preferencias.caractere_fimmensagem, -1);
+	xchange_table_set_byte_escape_patternUTF8(xt, preferencias.prefixo_byte_cru, -1, preferencias.sufixo_byte_cru, -1);
 
 	return xt;
 }
@@ -988,6 +989,7 @@ static void altera_padrao_codificacao_caracteres(char * encoding, gpointer data)
 		xchange_table_set_unknown_charUTF8(xt_new, preferencias.caractere_desconhecido, -1);
 		xchange_table_set_lineend_markUTF8(xt_new, preferencias.caractere_novalinha, -1);
 		xchange_table_set_paragraph_markUTF8(xt_new, preferencias.caractere_fimmensagem, -1);
+		xchange_table_set_byte_escape_patternUTF8(xt_new, preferencias.prefixo_byte_cru, -1, preferencias.sufixo_byte_cru, -1);
 
 		set_current_table(0);
 	}
