@@ -1283,6 +1283,8 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 				//memset(buffer_texto, 0, qtd_bytes_linha*5);
 
 				size_t lidos;
+				int using_byte_escape_previously = 	xchange_table_is_using_byte_escape(hexv->xt);
+				xchange_table_use_unknown_byte_as_byte_escape(hexv->xt, 0);
 				int resp_texto = xchange_table_print_best_stringUTF8(hexv->xt,
 						&hexv->bytes[off + text_bytes_to_skip], qtd_bytes_linha
 								>= xchange_file_get_size(hexv->xf)
@@ -1290,6 +1292,7 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 								: xchange_file_get_size(hexv->xf)
 										- (hexv->fileoffset + off),
 						buffer_texto, qtd_bytes_linha, &lidos);
+				xchange_table_use_unknown_byte_as_byte_escape(hexv->xt, using_byte_escape_previously);
 
 				//g_print("resp: %i lidos %zi texto: %s\n", resp_texto, lidos, buffer_texto);
 				if (linha_n >= hexv->lines_shown)
@@ -2313,7 +2316,10 @@ static gboolean miniedition_create(XChangeHexView* hexv)
 	GtkWidget *frame_text = gtk_frame_new(NULL);
 
 	size_t selected_size;
+	int using_byte_escape_previously = xchange_table_is_using_byte_escape(hexv->xt);
+	xchange_table_use_unknown_byte_as_byte_escape(hexv->xt, 1);
 	gchar *selected_text = xchange_hex_view_get_selected_text(hexv,&selected_size);
+	xchange_table_use_unknown_byte_as_byte_escape(hexv->xt, using_byte_escape_previously);
 	if (selected_text)
 	{
 		const gchar *end = NULL;

@@ -23,6 +23,9 @@
 #define DEFAULT_LINEEND_MARK "\xE2\x8F\x8E"
 #define DEFAULT_PARAGRAPH_MARK "\xC2\xB6"
 
+#define DEFAULT_INITIAL_BYTE_ESCAPE "<$"
+#define DEFAULT_FINAL_BYTE_ESCAPE ">"
+
 enum EntryType
 {
 	ENTRY_NORMAL,
@@ -71,13 +74,20 @@ struct XChangeTable
 	Entry **entries_value;
 //	Entry *entries;
 	iconv_t icd;
+
 	// Special entries
-	unsigned char *unknown;
-	int unknown_length;
 	uint8_t *lineend_key;
 	int lineend_key_length;
 	uint8_t *paragraph_key;
 	int paragraph_key_length;
+
+	int cloak_unknown_bytes; // Should it use Unknown or byte escape sequence?
+	unsigned char *unknown; // A UTF-8 character (string) to b used when a byte has no table correspondence entry. Can be not NULL-terminated.
+	int unknown_length; // The length of unknown field.
+	char *initial_byte_escape;
+	int initial_byte_escape_length;
+	char *final_byte_escape;
+	int final_byte_escape_length;
 };
 
 static int convert_encoding(iconv_t icd, char**inbuf, size_t *inleft, char **outbuf, size_t *outleft);
@@ -105,11 +115,20 @@ static XChangeTable *xchange_table_new()
 	xt->lineend_key_length = 0;
 	xt->paragraph_key_length = 0;
 
+	xt->cloak_unknown_bytes = 0;
+	xt->initial_byte_escape = strdup(DEFAULT_INITIAL_BYTE_ESCAPE);
+	xt->final_byte_escape = strdup(DEFAULT_FINAL_BYTE_ESCAPE);
+	xt->initial_byte_escape_length = strlen(DEFAULT_INITIAL_BYTE_ESCAPE);
+	xt->final_byte_escape_length = strlen(DEFAULT_FINAL_BYTE_ESCAPE);
+
 	return xt;
 }
 
 XChangeTable * xchange_table_open(const char *path, TableType type, const char *_encoding)
 {
+	if (type == CHARSET_TABLE)
+		return xchange_table_create_from_encoding(_encoding);
+
 	XChangeFile *xf = xchange_file_open(path, "rb");
 	if (xf == NULL)
 		return NULL;
@@ -324,6 +343,8 @@ void xchange_table_close(XChangeTable *table)
 	free(table->entries_value);
 
 	free(table->unknown);
+	free(table->initial_byte_escape);
+	free(table->final_byte_escape);
 	// table->paragraph_key and table->lineend_key are freed when destroying their table->entries_key
 	free(table);
 }
@@ -346,6 +367,8 @@ int xchange_table_get_size(const XChangeTable *table)
 {
 	if (table == NULL)
 		return XCHANGE_TABLE_UNKNOWN_ERROR;
+	if (table->type == CHARSET_TABLE)
+		return XCHANGE_TABLE_UNKNOWN_SIZE;
 	return table->nentries;
 }
 
@@ -1053,6 +1076,52 @@ static Entry* search_entry_by_key(Entry * const *list, int list_size, const unsi
 	return e;
 }
 
+/**
+ * Imprime a representação de caractere desconhecido em output do jeito
+ * que se está configurado para fazer.
+ * @param table
+ * @param bytes
+ * @param output
+ * @param output_size
+ * @return O quanto de bytes se usou em output. -1 se deu erro.
+ */
+static int printUTF8_when_unknown(const XChangeTable *table, const uint8_t *bytes, uint8_t *output, size_t output_size)
+{
+	int output_used;
+	if (table->cloak_unknown_bytes)
+	{
+		output_used = table->unknown_length;
+		if (output_size > 0 && output_size < output_used)
+			return -1;
+		if (output != NULL)
+			memcpy(output, table->unknown, output_used);
+	}
+	else
+	{
+		output_used = table->initial_byte_escape_length + 2 + table->final_byte_escape_length;
+		if (output_size > 0 && output_size < output_used)
+			return -1;
+		if (output != NULL)
+		{
+			if (table->initial_byte_escape)
+				memcpy(output, table->initial_byte_escape, table->initial_byte_escape_length);
+			output += table->initial_byte_escape_length;
+
+			char nibble;
+			nibble = bytes[0] >> 4;
+			output[0] = nibble < 10? nibble + 0x30 : (nibble-10) + 0x41;
+			nibble = bytes[0] & 0x0f;
+			output[1] = nibble < 10? nibble + 0x30 : (nibble-10) + 0x41;
+
+			output+=2;
+
+			if (table->final_byte_escape)
+				memcpy(output, table->final_byte_escape, table->final_byte_escape_length);
+		}
+	}
+	return output_used;
+}
+
 int xchange_table_print_stringUTF8(const XChangeTable *table,
 		const uint8_t *bytes, size_t size, char *text)
 {
@@ -1098,7 +1167,6 @@ int xchange_table_print_stringUTF8(const XChangeTable *table,
 	// Table files
 	Entry *e;
 	int n;
-	int unknown_character_length = table->unknown_length;
 	while (inpos < size)
 	{
 		// Search best match entry
@@ -1123,12 +1191,16 @@ int xchange_table_print_stringUTF8(const XChangeTable *table,
 		}
 		else
 		{
-			if (text != NULL)
+			int output_used;
+			output_used = printUTF8_when_unknown(table, bytes+inpos,
+					text != NULL ? (uint8_t*)text+outpos : NULL, -1);
+			if (output_used >= 0)
 			{
-				memcpy(text+outpos, table->unknown, unknown_character_length);
+				inpos++;
+				outpos+=output_used;
 			}
-			outpos+=unknown_character_length;
-			inpos++;
+			else
+				; // Impossível? Já se espera que caiba tudo em text
 		}
 	}
 	return outpos;
@@ -1196,7 +1268,6 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 		}
 
 
-		int unknown_character_length = table->unknown_length;
 		int error = 0;
 		while (inleft > 0)
 		{
@@ -1206,11 +1277,17 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 				{
 				case EILSEQ:
 				{
-					inbuf++;
-					inleft--;
-					memcpy(outbuf, table->unknown, unknown_character_length);
-					outbuf += unknown_character_length;
-					outleft -= unknown_character_length;
+					int output_used;
+					output_used = printUTF8_when_unknown(table, (uint8_t*)inbuf, (uint8_t*)outbuf, outleft);
+					if (output_used >= 0)
+					{
+						inbuf++;
+						inleft--;
+						outbuf+=output_used;
+						outleft-=output_used;
+					}
+					else
+						error = 1;
 					break;
 				}
 				case EINVAL:
@@ -1243,13 +1320,14 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 									{
 										// Tudo errado: sequência inválida
 										//  copia byte de caractere desconhecido e fim
-										if (outleft >= unknown_character_length)
+										int output_used;
+										output_used = printUTF8_when_unknown(table, (uint8_t*)inbuf, (uint8_t*)outbuf, outleft);
+										if (output_used >= 0)
 										{
 											inbuf++;
 											inleft--;
-											memcpy(outbuf, table->unknown, unknown_character_length);
-											outbuf += unknown_character_length;
-											outleft -= unknown_character_length;
+											outbuf+=output_used;
+											outleft-=output_used;
 										}
 										else
 											error = 1;
@@ -1315,19 +1393,44 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 		}
 		else
 		{
-			if (text != NULL)
-			{
-				memcpy(text+outpos, table->unknown, table->unknown_length);
-				outpos+=table->unknown_length;
-			}
-			else
-				outpos+=1;
+			int output_used = printUTF8_when_unknown(table, bytes+inpos,
+					text != NULL ? (uint8_t*)text+outpos : NULL, -1);
+			outpos += output_used;
 			inpos++;
 		}
 	}
 	if (read != NULL)
 		*read = inpos;
 	return outpos;
+}
+
+static int scanUTF8_when_byte_escape(const XChangeTable *table, const char *utf8_text, int utf8_size, uint8_t *bytes)
+{
+	if (table->initial_byte_escape_length +2 + table->final_byte_escape_length <= utf8_size )
+	{
+		if (memcmp(utf8_text, table->initial_byte_escape, table->initial_byte_escape_length) == 0)
+		{
+			const char *next_text = utf8_text + table->initial_byte_escape_length;
+			// Verificar se há dois dígitos hexadecimais e se termina com o escape final
+			if ( utf8_is_hexdigit(*next_text) && utf8_is_hexdigit(*(next_text+1)))
+			{
+				if (table->final_byte_escape == NULL || memcmp(next_text+2, table->final_byte_escape, table->final_byte_escape_length) == 0)
+				{
+					uint8_t value;
+					value = utf8_from_hex(*next_text);
+					value <<= 4;
+					value |= utf8_from_hex(*(next_text+1));
+
+					if (bytes != NULL)
+						*bytes = value;
+
+					return table->initial_byte_escape_length + 2 + table->final_byte_escape_length;
+
+				}
+			}
+		}
+	}
+	return 0;
 }
 
 int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, size_t size, uint8_t *bytes)
@@ -1356,11 +1459,51 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 		{
 			return -2;
 		}
-		if (iconv(icd, &inbuf, &inleft, &outbuf, &outleft) == (size_t)-1)
+
+		if (table->cloak_unknown_bytes)
 		{
-			if (bytes == NULL)
-				free(tmp2);
-			return -3;
+			if (iconv(icd, &inbuf, &inleft, &outbuf, &outleft) == (size_t)-1)
+			{
+				if (bytes == NULL)
+					free(tmp2);
+				return -3;
+			}
+		}
+		else
+		{
+			size_t pos;
+			size_t fake_inleft;
+			while (inleft)
+			{
+				// 1. Search next byte escape sequence
+				pos = 0;
+				while (pos < inleft)
+				{
+					if (scanUTF8_when_byte_escape(table, inbuf+pos, inleft-pos, NULL))
+						break;
+					pos++;
+				}
+				fake_inleft = pos;
+				// 2. Convert until next byte escape sequence
+				if (iconv(icd, &inbuf, &fake_inleft, &outbuf, &outleft) == (size_t)-1)
+				{
+					if (bytes == NULL)
+						free(tmp2);
+					return -3;
+				}
+				// 3. If pos <> inleft, scan byte escape
+				if (pos < inleft)
+				{
+					int escape_read = scanUTF8_when_byte_escape(table, inbuf, inleft, (uint8_t*)outbuf);
+					inleft -= escape_read;
+					inbuf += escape_read;
+					outbuf ++;
+					outleft --;
+				}
+				// 4. Adjust inleft
+				inleft -= pos - fake_inleft;
+				// 5. If inleft > 0, go back to step 1
+			}
 		}
 		iconv_close(icd);
 		if (bytes == NULL)
@@ -1378,6 +1521,16 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 	int n;
 	while (inpos < size)
 	{
+		if (! table->cloak_unknown_bytes )
+		{
+			int qtd = scanUTF8_when_byte_escape(table, text + inpos, size-inpos, bytes != NULL ? bytes+outpos : NULL);
+			if (qtd > 0)
+			{
+				outpos++;
+				inpos += qtd;
+				continue;
+			}
+		}
 		for (n = 0; n < table->nentries; n++)
 		{
 			e = table->entries_value[n];
@@ -1457,27 +1610,53 @@ void xchange_table_dump_entries(XChangeTable *xt)
 	}
 }
 
-
-int xchange_table_set_unknown_charUTF8(XChangeTable *table, const char* character, int length)
+static unsigned char *duplicate_string_from_char_sequence(const char* character, int *_length)
 {
-	if (table == NULL)
-		return 0;
-	if (character == NULL)
-		return 0;
+	if (character == NULL || _length == NULL)
+		return NULL;
+
+	int length = *_length;
 
 	if (length <= 0)
 	{
 		length = strlen(character);
 		if (length == 0)
-			return 0;
+			return NULL;
 	}
 
-	unsigned char *unknown = malloc(length+1);
-	if (unknown == 0)
+	unsigned char *new_copy = malloc(length+1);
+	if (new_copy == 0)
+		return NULL;
+
+	memcpy(new_copy, character, length);
+	new_copy[length] = 0;
+	*_length = length;
+	return new_copy;
+}
+
+int xchange_table_use_unknown_byte_as_byte_escape(XChangeTable *table, int use_byte_escape)
+{
+	if (table == NULL)
+		return 0;
+	table->cloak_unknown_bytes = !use_byte_escape;
+	return 1;
+}
+
+int xchange_table_is_using_byte_escape(XChangeTable *table)
+{
+	if (table == NULL)
+		return 0;
+	return !table->cloak_unknown_bytes;
+}
+
+int xchange_table_set_unknown_charUTF8(XChangeTable *table, const char* character, int length)
+{
+	if (table == NULL)
 		return 0;
 
-	memcpy(unknown, character, length);
-	unknown[length] = 0;
+	unsigned char *unknown = (unsigned char*)duplicate_string_from_char_sequence(character, &length);
+	if (unknown == NULL)
+		return 0;
 
 	free(table->unknown);
 	table->unknown = unknown;
@@ -1490,25 +1669,13 @@ int xchange_table_set_lineend_markUTF8(XChangeTable *table, const char* characte
 {
 	if (table == NULL)
 		return 0;
-	if (character == NULL)
-		return 0;
-
-	if (length <= 0)
-	{
-		length = strlen(character);
-		if (length == 0)
-			return 0;
-	}
 
 	if (table->lineend_key == NULL || table->lineend_key_length <= 0)
 		return 0;
 
-	unsigned char *new_lineend = malloc(length+1);
-	if (new_lineend == 0)
+	unsigned char *new_lineend = (unsigned char*)duplicate_string_from_char_sequence(character, &length);
+	if (new_lineend == NULL)
 		return 0;
-
-	memcpy(new_lineend, character, length);
-	new_lineend[length] = 0;
 
 	Entry *e = search_entry_by_key(table->entries_key, table->nentries, table->lineend_key, table->lineend_key_length);
 	if (e == NULL)
@@ -1529,25 +1696,13 @@ int xchange_table_set_paragraph_markUTF8(XChangeTable *table, const char* charac
 {
 	if (table == NULL)
 		return 0;
-	if (character == NULL)
-		return 0;
-
-	if (length <= 0)
-	{
-		length = strlen(character);
-		if (length == 0)
-			return 0;
-	}
 
 	if (table->paragraph_key == NULL || table->paragraph_key_length <= 0)
 		return 0;
 
-	unsigned char *new_paragraph = malloc(length+1);
-	if (new_paragraph == 0)
+	unsigned char *new_paragraph = (unsigned char*)duplicate_string_from_char_sequence(character, &length);
+	if (new_paragraph == NULL)
 		return 0;
-
-	memcpy(new_paragraph, character, length);
-	new_paragraph[length] = 0;
 
 	Entry *e = search_entry_by_key(table->entries_key, table->nentries, table->paragraph_key, table->paragraph_key_length);
 	if (e == NULL)
@@ -1560,6 +1715,45 @@ int xchange_table_set_paragraph_markUTF8(XChangeTable *table, const char* charac
 	e->nvalue = length;
 
 	bubble(table->entries_value, table->nentries, inverse_compare_entry_value_size);
+
+	return 1;
+}
+
+int xchange_table_set_byte_escape_patternUTF8(XChangeTable *table, const char* start_string, int start_length, const char* end_string, int end_length)
+{
+	if (table == NULL)
+		return 0;
+
+	if (start_string == NULL || start_length == 0 || (end_string != NULL && end_length == 0) || (end_string == NULL && end_length > 0))
+		return 0;
+
+	if (start_length == -1)
+		start_length = strlen(start_string);
+	if (end_string != NULL && end_length == -1)
+		end_length = strlen(end_string);
+
+	unsigned char *start_escape = duplicate_string_from_char_sequence((char*)start_string, &start_length);
+	if (start_escape == NULL)
+		return 0;
+
+	unsigned char *end_escape = NULL;
+	if (end_string != NULL)
+	{
+		end_escape = duplicate_string_from_char_sequence(end_string, &end_length);
+		if (end_escape == NULL)
+		{
+			free(start_escape);
+			return 0;
+		}
+	}
+
+	free(table->initial_byte_escape);
+	table->initial_byte_escape = (char*)start_escape;
+	table->initial_byte_escape_length = start_length;
+
+	free(table->final_byte_escape);
+	table->final_byte_escape = (char*)end_escape;
+	table->final_byte_escape_length = end_escape != NULL? end_length : 0;
 
 	return 1;
 }

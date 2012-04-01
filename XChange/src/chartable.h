@@ -86,11 +86,39 @@ int xchange_table_get_largest_entry_length(const XChangeTable *table, int by_key
 
 /**
  * Set how a not-found table entry is represented.
+ * There are two ways:
+ * - cloak every unknown byte: they'll be replaced by string set by xchange_table_set_unknown_charUTF8().
+ * - use a byte escape: the unknown byte has its value shown using hexadecimal notation, e.g. <$0E>.
+ * You can change the escape pattern by using xchange_table_set_byte_escape_patternUTF8().
+ *
+ * @param[in] table The table handler.
+ * @param use_byte_escape 0 if it must use byte value escapes. Any other value, otherwise.
+ * @return 1 on success, 0 on failure. The only way to fail is using an invalid handler.
+ */
+int xchange_table_use_unknown_byte_as_byte_escape(XChangeTable *table, int use_byte_escape);
+
+/**
+ * Get the current setting of how to represent a not-found entry.
+ * See xchange_table_use_unknown_byte_as_byte_escape().
+ * @param[in] table The table handler.
+ * @return 0 if it doesn't use the byte value escape method. Any other value, otherwise.
+ */
+int xchange_table_is_using_byte_escape(XChangeTable *table);
+/**
+ * Set a not-found table entry to be represented as a byte escape sequence, e.g <$9A>.
+ * @param[in] table The table handler.
+ * @param[in] start_string The UTF-8 encoded prefix for the hexadecimal value, e.g. "<$". Cannot be NULL.
+ * @param start_length The UTF-8 prefix byte length. -1 if start_string is NULL terminated.
+ * @param[in] end_string The UTF-8 encoded suffix for the hexadecimal value, e.g. ">". Can be NULL.
+ * @param end_length The UTF-8 suffix byte length. -1 if start_string is NULL terminated.
+ * @return 1 on success, 0 otherwise.
+ */
+int xchange_table_set_byte_escape_patternUTF8(XChangeTable *table, const char* start_string, int start_length, const char* end_string, int end_length);
+/**
+ * Set how a not-found table entry is represented.
  *
  * If there is no conversion possible to a byte string (whose length can be from xchange_table_get_largest_entry_length() to 1),
  * the first byte of string will be represented by this "character" string.
- *
- * TODO: Accept wildcards for outputs like \<$xx\>
  *
  * @param[in] table The table handler.
  * @param[in] character A UTF-8 encoded string to be used as a representation for a not-found entry.
