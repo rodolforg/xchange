@@ -900,6 +900,9 @@ static GdkPoint offset_para_pontoxy_texto(const XChangeHexView *hexv, off_t offs
 		*/
 	}
 
+	int using_byte_escape_previously = 	xchange_table_is_using_byte_escape(hexv->xt);
+	xchange_table_use_unknown_byte_as_byte_escape(hexv->xt, 0);
+
 	cairo_text_extents_t text_size;
 	if (get_line_text_size(hexv,offset,FALSE, &text_size))
 	{
@@ -909,7 +912,7 @@ static GdkPoint offset_para_pontoxy_texto(const XChangeHexView *hexv, off_t offs
 	{
 		p.x = 0;
 	}
-
+	xchange_table_use_unknown_byte_as_byte_escape(hexv->xt, using_byte_escape_previously);
 
 	if (hexv->show_offset_panel)
 		p.x += hexv->offset_panel_width + OFFSET_PANEL_SPACEMENT;
