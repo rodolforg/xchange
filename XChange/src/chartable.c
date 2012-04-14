@@ -633,7 +633,7 @@ static int convert_encoding(iconv_t icd, char**inbuf, size_t *inleft, char **out
 	return 1;
 }
 
-static size_t get_line(const uint8_t *buffer, size_t buffer_size, uint8_t *line, size_t line_size)
+static size_t get_line(const uint8_t *buffer, size_t buffer_size, char *line, size_t line_size)
 {
 	assert(buffer != NULL);
 	assert(line != NULL);
@@ -731,7 +731,7 @@ static uint8_t utf8_from_hex(char character)
 	return (uint8_t)-1;
 }
 
-static uint8_t *utf8_get_hex(const uint8_t* line, size_t size)
+static uint8_t *utf8_get_hex(const char* line, size_t size)
 {
 	uint8_t *seq = calloc(size/2, 1);
 	if (seq == NULL)
@@ -756,11 +756,16 @@ static uint8_t *utf8_get_hex(const uint8_t* line, size_t size)
 	return seq;
 }
 
+
+static Entry *parse_paragraph_mark_line(const char *line, int line_length, int line_number);
+static Entry *parse_lineend_mark_line(const char *line, int line_length, int line_number);
+static Entry *parse_normal_entry_line(const char *line, int line_length, int line_number);
+
 static EntryList * load_table(const uint8_t *contents, size_t size, int *nentries)
 {
 	assert(contents != NULL);
 
-	uint8_t line[1024];
+	char line[1024];
 
 	EntryList *list = entry_list_create();
 	if (list == NULL)
@@ -778,7 +783,7 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 		line_number++;
 		n += bytes_read;
 
-		int line_length = strlen((char*)line);
+		int line_length = strlen(line);
 		if (line_length == 0)
 			continue;
 
@@ -786,153 +791,31 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 			continue; // Comment line
 		if (line_length > 1 && line[0] == '/' && line[1] == '/')
 			continue; // Comment line
+
+		Entry * e = NULL;
 		if (line[0] == '*')
-		{
-			int key_text_length = line_length-1;
-			uint8_t *key = NULL;
-			if (key_text_length > 0)
-			{
-				if (line[1] == UTF8_EQUAL_SIGN)
-				{
-					key_text_length--;
-					if (key_text_length > 0)
-						key = utf8_get_hex(&line[2], key_text_length);
-				}
-				else
-					key = utf8_get_hex(&line[1], key_text_length);
-			}
-			if (key == NULL)
-			{
-				fprintf(stderr, "table line malformed (line #%i)\n", line_number); // FIXME
-				continue;
-			}
-			else
-			{
-				size_t value_length = strlen(DEFAULT_PARAGRAPH_MARK);
-				uint8_t *value = malloc(value_length);
-				if (value == NULL)
-					perror("allocating table entry value"); // FIXME
-				else
-				{
-					memcpy(value,DEFAULT_PARAGRAPH_MARK,value_length);
+			e = parse_paragraph_mark_line(line, line_length, line_number);
+		else if (line[0] == '/')
+			e = parse_lineend_mark_line(line, line_length, line_number);
+		else
+			e = parse_normal_entry_line(line, line_length, line_number);
 
-					Entry *e = create_table_entry(key, key_text_length/2, value, value_length, ENTRY_PARAGRAPH);
-					if (e == NULL)
-						perror("creating table entry"); // FIXME
-					else
-					{
-						if (!entry_list_insert(list, e))
-							perror("inserting entry into table"); // FIXME
-						else
-							qtd++;
-					}
-				}
-			}
+		if (e == NULL)
+		{
+			fprintf(stderr, "Error creating entry for table (line #%i)\n", line_number); // FIXME
+			continue;
+		}
+		if (!entry_list_insert(list, e))
+		{
+			destroy_table_entry(e);
+			fprintf(stderr, "Error while inserting entry from table (line #%i)\n", line_number); // FIXME
 			continue;
 		}
 
-		if (line[0] == '/')
-		{
-			int key_text_length = line_length-1;
-			uint8_t *key = NULL;
-			if (key_text_length > 0)
-			{
-				if (line[1] == UTF8_EQUAL_SIGN)
-				{
-					key_text_length--;
-					if (key_text_length > 0)
-						key = utf8_get_hex(&line[2], key_text_length);
-				}
-				else
-					key = utf8_get_hex(&line[1], key_text_length);
-			}
-			if (key == NULL)
-			{
-				fprintf(stderr, "table line malformed (line #%i)\n", line_number); // FIXME
-				continue;
-			}
-			else
-			{
-				size_t value_length = strlen(DEFAULT_LINEEND_MARK);
-				uint8_t *value = malloc(value_length);
-				if (value == NULL)
-					perror("allocating table entry value"); // FIXME
-				else
-				{
-					memcpy(value,DEFAULT_LINEEND_MARK,value_length);
-
-					Entry *e = create_table_entry(key, key_text_length/2, value, value_length, ENTRY_LINEEND);
-					if (e == NULL)
-						perror("creating table entry"); // FIXME
-					else
-					{
-						if (!entry_list_insert(list, e))
-							perror("inserting entry into table"); // FIXME
-						else
-							qtd++;
-					}
-				}
-			}
-			continue;
-		}
-
-		// Normal entry
-		size_t pos = search_byte(line, line_length, UTF8_EQUAL_SIGN);
-
-		if (pos > 0 && pos != (size_t)-1)
-		{
-			size_t pos_value = pos+1;
-			size_t value_length = line_length-pos_value;
-			if (value_length <= 0)
-			{
-				continue;
-			}
-			// Trimming
-			while (utf8_is_whitespace(line[pos-1]))
-				pos--;
-			// Get Hexcode
-			if (pos % 2 == 0)
-			{
-				uint8_t *key = utf8_get_hex(line, pos);
-				if (key == NULL)
-				{
-					fprintf(stderr, "Error while reading hexadecimal key from table (line #%i)\n", line_number); // FIXME
-					continue;
-				}
-				uint8_t *value = malloc(value_length);
-				if (value == NULL)
-				{
-					free(key);
-					fprintf(stderr, "Error while storing value from table (line #%i)\n", line_number); // FIXME
-					perror("Reason");
-					continue;
-				}
-				memcpy(value, &line[pos_value], value_length);
-				Entry *e = create_table_entry(key, pos/2, value, value_length, ENTRY_NORMAL);
-				if (e == NULL)
-				{
-					free(key);
-					free(value);
-					fprintf(stderr, "Error creating entry for table (line #%i)\n", line_number); // FIXME
-					continue;
-				}
-				if (!entry_list_insert(list, e))
-				{
-					destroy_table_entry(e);
-					fprintf(stderr, "Error while inserting entry from table (line #%i)\n", line_number); // FIXME
-					continue;
-				}
-
-				qtd++;
-			}
-			else
-			{
-				// TODO: Odd number of characters before equal sign
-			}
-		}
+		qtd++;
 	}
 	// TODO: Aceitar convenções de comentários do Toon
-	//	# - comentário de Shell Script (meu preferido).
+	//	# - comentário de Shell Script.
 	//	// - comentário de uma linha só, C99 e C++.
 	//	/* abre e fecha, comentário de C.
 
@@ -942,6 +825,136 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 	if (nentries != NULL)
 		*nentries = qtd;
 	return list;
+}
+
+static Entry * parse_paragraph_mark_line(const char *line, int line_length, int line_number)
+{
+	assert(line != NULL);
+	assert(line_length > 0);
+
+	if (line[0] != '*')
+		return NULL;
+
+	if (line_length < 2)
+	{
+		fprintf(stderr, "table line malformed (line #%i)\n", line_number); // FIXME
+		return NULL;
+	}
+
+	int key_text_length = line_length-1;
+	int pos = 1;
+	uint8_t *key;
+
+	if (line[pos] == UTF8_EQUAL_SIGN)
+	{
+		pos++;
+		key_text_length--;
+		if (key_text_length <= 0)
+		{
+			fprintf(stderr, "table line malformed (line #%i)\n", line_number); // FIXME
+			return NULL;
+		}
+	}
+
+	key = utf8_get_hex(&line[pos], key_text_length);
+
+	size_t value_length = strlen(DEFAULT_PARAGRAPH_MARK);
+	uint8_t *value = malloc(value_length);
+	if (value == NULL)
+	{
+		perror("allocating table entry value"); // FIXME
+		free(key);
+		return NULL;
+	}
+
+	memcpy(value,DEFAULT_PARAGRAPH_MARK,value_length);
+	return create_table_entry(key, key_text_length/2, value, value_length, ENTRY_PARAGRAPH);
+}
+
+static Entry * parse_lineend_mark_line(const char *line, int line_length, int line_number)
+{
+	assert(line != NULL);
+	assert(line_length > 0);
+
+	if (line[0] != '/')
+		return NULL;
+
+	if (line_length < 2)
+	{
+		fprintf(stderr, "table line malformed (line #%i)\n", line_number); // FIXME
+		return NULL;
+	}
+
+	int key_text_length = line_length-1;
+	int pos = 1;
+	uint8_t *key;
+
+	if (line[pos] == UTF8_EQUAL_SIGN)
+	{
+		pos++;
+		key_text_length--;
+		if (key_text_length <= 0)
+		{
+			fprintf(stderr, "table line malformed (line #%i)\n", line_number); // FIXME
+			return NULL;
+		}
+	}
+
+	key = utf8_get_hex(&line[pos], key_text_length);
+
+	size_t value_length = strlen(DEFAULT_LINEEND_MARK);
+	uint8_t *value = malloc(value_length);
+	if (value == NULL)
+	{
+		perror("allocating table entry value"); // FIXME
+		free(key);
+		return NULL;
+	}
+
+	memcpy(value,DEFAULT_LINEEND_MARK,value_length);
+	return create_table_entry(key, key_text_length/2, value, value_length, ENTRY_LINEEND);
+}
+
+static Entry *parse_normal_entry_line(const char *line, int line_length, int line_number)
+{
+	assert(line != NULL);
+	assert(line_length > 0);
+
+	size_t pos = search_byte((const uint8_t*)line, line_length, UTF8_EQUAL_SIGN);
+
+	if (pos <= 0 || pos == (size_t)-1)
+		return NULL;
+
+	size_t pos_value = pos+1;
+	size_t value_length = line_length-pos_value;
+	if (value_length <= 0)
+		return NULL;
+	// Trimming
+	while (utf8_is_whitespace(line[pos-1]))
+		pos--;
+	// Get Hexcode
+	if (pos % 2 != 0)
+	{
+		// TODO: Odd number of characters before equal sign
+		return NULL;
+	}
+
+	uint8_t *key = utf8_get_hex(line, pos);
+	if (key == NULL)
+	{
+		fprintf(stderr, "Error while reading hexadecimal key from table (line #%i)\n", line_number); // FIXME
+		return NULL;
+	}
+	uint8_t *value = malloc(value_length);
+	if (value == NULL)
+	{
+		free(key);
+		fprintf(stderr, "Error while storing value from table (line #%i)\n", line_number); // FIXME
+		perror("Reason");
+		return NULL;
+	}
+	memcpy(value, &line[pos_value], value_length);
+	return create_table_entry(key, pos/2, value, value_length, ENTRY_NORMAL);
 }
 
 static void troca_bolha( void * v[], int i)
