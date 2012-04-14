@@ -473,8 +473,6 @@ static EntryItem *entry_list_item_create(Entry * e)
 static void entry_list_destroy(EntryList *list, int destroy_content)
 {
 	assert(list);
-	//1424
-	//063103
 	EntryItem *item = list->first;
 	while (item != NULL)
 	{
@@ -946,59 +944,7 @@ static EntryList * load_table(const uint8_t *contents, size_t size, int *nentrie
 	return list;
 }
 
-
-/*
-    for i := 1 to length[A]-1 do
-    begin
-        value := A[i];
-        j := i - 1;
-        done := false;
-        repeat
-            { To sort in descending order simply reverse
-              the operator i.e. A[j] < value }
-            if A[j] > value then
-            begin
-                A[j + 1] := A[j];
-                j := j - 1;
-                if j < 0 then
-                    done := true;
-            end
-            else
-                done := true;
-        until done;
-        A[j + 1] := value;
-    end;
- */
-/*
-
-for(i = 1; i < n; i++)
-{
-    p1 = head;
-    p2 = head->next;
-    p3 = p2->next;
- 
-    for(j = 1; j <= (n - i); j++)
-    {
-       if(p2->value < p3->value) 
-       {
-           p2->next = p3->next;
-           p3->next = p2;
-           p1->next = p3;
-           p1       = p3;
-           p3       = p2->next;
-       }
-       else
-       {
-           p1 = p2;
-           p2 = p3;
-           p3 = p3->next;
-       }
-    }
-}
-
- */
-
-static void swapbubble( void * v[], int i)
+static void troca_bolha( void * v[], int i)
 {
 	void * aux;
 
@@ -1007,12 +953,12 @@ static void swapbubble( void * v[], int i)
 	v[i+1] = aux;
 }
 
-static void bubble(void * pointer_vector, int qtd, int (*compare)(void*,void*))
+static void ordenacao_bolha(void * vetor_ponteiros, int qtd, int (*comparar)(void*,void*))
 {
 	int i;
 	int trocou;
 
-	void **v = pointer_vector;
+	void **v = vetor_ponteiros;
 
 	do
 	{
@@ -1020,24 +966,24 @@ static void bubble(void * pointer_vector, int qtd, int (*compare)(void*,void*))
 		trocou = 0;
 
 		for(i = 0; i < qtd; i++)
-			if(compare(v[i], v[i + 1]) > 0)
+			if(comparar(v[i], v[i + 1]) > 0)
 			{
-				swapbubble(v, i);
+				troca_bolha(v, i);
 				trocou = 1;
 
 			}
-	}while(trocou);
+	} while(trocou);
 }
 
 static int inverse_compare_entry_key_size(void *a, void *b)
 {
-	Entry *e = a, *f =b;
+	Entry *e = a, *f = b;
 	return f->nkey - e->nkey;
 }
 
 static int inverse_compare_entry_value_size(void *a, void *b)
 {
-	Entry *e = a, *f =b;
+	Entry *e = a, *f = b;
 	return f->nvalue - e->nvalue;
 }
 
@@ -1048,8 +994,8 @@ static void sort_table_entries(XChangeTable* xt)
 		return;
 
 	int n = xt->nentries;
-	bubble(xt->entries_key, n, inverse_compare_entry_key_size);
-	bubble(xt->entries_value, n, inverse_compare_entry_value_size);
+	ordenacao_bolha(xt->entries_key, n, inverse_compare_entry_key_size);
+	ordenacao_bolha(xt->entries_value, n, inverse_compare_entry_value_size);
 	return;
 }
 
@@ -1333,7 +1279,7 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 											error = 1;
 										break;
 									}
-									perror("Iconv error 1");
+									perror("Iconv unexpected error (1)");
 									error = 1;
 								}
 								break;
@@ -1348,14 +1294,14 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 					}
 					else
 					{
-						perror("Iconv error 2");
+						perror("Iconv \"error\" (2)");
 						error = 1;
 					}
 					break;
 				}
 				default:
 					error = 1;
-					perror("Iconv error 3");
+					perror("Iconv unexpected error (3)");
 					break;
 				}
 			}
@@ -1687,7 +1633,7 @@ int xchange_table_set_lineend_markUTF8(XChangeTable *table, const char* characte
 	e->value = new_lineend;
 	e->nvalue = length;
 
-	bubble(table->entries_value, table->nentries, inverse_compare_entry_value_size);
+	ordenacao_bolha(table->entries_value, table->nentries, inverse_compare_entry_value_size);
 
 	return 1;
 }
@@ -1714,7 +1660,7 @@ int xchange_table_set_paragraph_markUTF8(XChangeTable *table, const char* charac
 	e->value = new_paragraph;
 	e->nvalue = length;
 
-	bubble(table->entries_value, table->nentries, inverse_compare_entry_value_size);
+	ordenacao_bolha(table->entries_value, table->nentries, inverse_compare_entry_value_size);
 
 	return 1;
 }
