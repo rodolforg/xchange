@@ -90,7 +90,7 @@ struct XChangeTable
 	int final_byte_escape_length;
 };
 
-static int convert_encoding(iconv_t icd, char**inbuf, size_t *inleft, char **outbuf, size_t *outleft);
+static int convert_encoding(const char *encoding, char *intext, size_t insize, char **buffer, size_t *outsize);
 static EntryList * load_table(const uint8_t *contents, size_t size, int *nentries);
 static void sort_table_entries(XChangeTable* xt);
 
@@ -164,74 +164,43 @@ XChangeTable * xchange_table_open(const char *path, TableType type, const char *
 		return NULL;
 	}
 
-	iconv_t icd;
-
 #define ENCODING_TRIES 7
 	char *preferred_encoding[ENCODING_TRIES] = {"UTF-8", "ASCII", "MS-ANSI", "Shift-Jis", "EUC-JP", "ISO-8859-15", "ISO-8859-1"};
 	int encoding_try = 0;
-	int wrong_encoding;
+	int converted;
 
 
-	char *encoding;
+	const char *tmp_encoding;
 	do
 	{
 		if (_encoding == NULL || strlen(_encoding) == 0) // FIXME: strlen() works fine with UTF-16?
 		{
 			if (encoding_try < ENCODING_TRIES)
-				encoding = strdup(preferred_encoding[encoding_try++]);
-		}
-		else
-		{
-			encoding= strdup(_encoding);
-		}
-		if (encoding == NULL)
-		{
-			free(contents);
-			free(buffer);
-			return NULL;
-		}
-
-		icd = iconv_open("UTF-8", encoding);
-		if (icd == (iconv_t)-1)
-		{
-			free(encoding);
-			free(contents);
-			free(buffer);
-			return NULL;
-		}
-
-		char* inbuf = (char*)contents;
-		size_t inleft = filesize;
-
-		char *outbuf = buffer;
-		size_t outleft = outsize;
-		if (iconv(icd, &inbuf, &inleft, &outbuf, &outleft) == (size_t)-1)
-		{
-			free(encoding);
-			iconv_close(icd);
-			if (errno == EILSEQ || errno == EINVAL)
-			{
-				wrong_encoding = 1;
-			}
+				tmp_encoding = preferred_encoding[encoding_try++];
 			else
-			{
-				free(contents);
-				free(buffer);
-				return NULL;
-			}
+				break;
 		}
 		else
 		{
-			wrong_encoding = 0;
-			outsize -= outleft;
+			tmp_encoding= _encoding;
 		}
-	} while (wrong_encoding);
+		if (tmp_encoding == NULL)
+		{
+			free(contents);
+			free(buffer);
+			return NULL;
+		}
+
+		converted = convert_encoding(tmp_encoding, (char*)contents, filesize, &buffer, &outsize);
+
+	} while (!converted);
 
 	free(contents);
-	char *tmp = realloc(buffer, outsize);
-	if (tmp != NULL)
+
+	if (!converted)
 	{
-		buffer = tmp;
+		free(buffer);
+		return NULL;
 	}
 
 	int nentries;
@@ -239,25 +208,19 @@ XChangeTable * xchange_table_open(const char *path, TableType type, const char *
 	free(buffer);
 	if (entries == NULL || entries->size <= 0)
 	{
-		free(encoding);
 		entry_list_destroy(entries, 1);
-		iconv_close(icd);
 		return NULL;
 	}
 
 	Entry ** entries_array_1 = entry_list_to_array(entries);
 	if (entries_array_1 == NULL)
 	{
-		free(encoding);
-		iconv_close(icd);
 		entry_list_destroy(entries, 1);
 		return NULL;
 	}
 	Entry ** entries_array_2 = entry_list_to_array(entries);
 	if (entries_array_2 == NULL)
 	{
-		free(encoding);
-		iconv_close(icd);
 		entry_list_destroy(entries, 1);
 		free(entries_array_1);
 		return NULL;
@@ -269,12 +232,14 @@ XChangeTable * xchange_table_open(const char *path, TableType type, const char *
 	XChangeTable *xt = xchange_table_new();
 	if (xt == NULL)
 	{
-		free(encoding);
-		iconv_close(icd);
 		free(entries_array_1);
 		free(entries_array_2);
 		return NULL;
 	}
+
+	iconv_t icd = iconv_open("UTF-8", tmp_encoding);
+	char *encoding = strdup(tmp_encoding);
+
 	xt->icd = icd;
 	xt->encoding = encoding;
 	xt->type = THINGY_TABLE;
@@ -615,21 +580,29 @@ static Entry** entry_list_to_array(const EntryList *list)
 	return entries;
 }
 
-static int convert_encoding(iconv_t icd, char**inbuf, size_t *inleft, char **outbuf, size_t *outleft)
+static int convert_encoding(const char *encoding, char *intext, size_t insize, char **buffer, size_t *outsize)
 {
-	char *buffer = *outbuf;
-	size_t outsize = *outleft;
-	if (iconv(icd, inbuf, inleft, outbuf, outleft) == (size_t)-1)
+	char *outbuf = *buffer;
+	size_t outleft = *outsize;
+	char *inbuf = intext;
+	size_t inleft = insize;
+
+	iconv_t icd = iconv_open("UTF-8", encoding);
+	if (icd == (iconv_t)-1)
+		return 0;
+
+	if (iconv(icd, &inbuf, &inleft, &outbuf, &outleft) == (size_t)-1)
 	{
+		iconv_close(icd);
 		return 0;
 	}
+	iconv_close(icd);
 
-	outsize -= *outleft;
-	char *tmp = realloc(buffer, outsize);
+	*outsize -= outleft;
+	char *tmp = realloc(*buffer, *outsize);
 	if (tmp != NULL)
-	{
-		buffer = tmp;
-	}
+		*buffer = tmp;
+
 	return 1;
 }
 
