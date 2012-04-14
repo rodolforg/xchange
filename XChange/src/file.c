@@ -800,7 +800,7 @@ static int removeMemoryFileSectionBeginning(FileSection *s, off_t new_start)
 	tmp = realloc(s->data.data, s->size-removed_size);
 	if (tmp == NULL)
 		return 0;//TODO: care to return original values if realloc fails
-	tmp = s->data.data;
+	s->data.data = tmp;
 	s->size -= removed_size;
 	s->offset = new_start;
 	return 1;
