@@ -1566,9 +1566,11 @@ void on_action_abrir_janela_substituir_activate(GtkAction *action, gpointer data
 }
 
 G_MODULE_EXPORT
-void on_button_localizar_cancelar_clicked(GtkButton *button, gpointer data)
+void on_button_localizar_cancelar_activate(GtkButton *button, gpointer data)
 {
-	gtk_widget_hide(dialog_localizar);
+	gtk_dialog_response(GTK_DIALOG(dialog_localizar), GTK_RESPONSE_CANCEL);
+//	gtk_widget_hide(dialog_localizar);
+
 }
 
 static void inicia_dados_localizar(struct DadosLocalizar *localizar)
