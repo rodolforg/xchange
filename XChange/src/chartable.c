@@ -165,7 +165,7 @@ XChangeTable * xchange_table_open(const char *path, TableType type, const char *
 #define ENCODING_TRIES 7
 	char *preferred_encoding[ENCODING_TRIES] = {"UTF-8", "ASCII", "MS-ANSI", "Shift-Jis", "EUC-JP", "ISO-8859-15", "ISO-8859-1"};
 	int encoding_try = 0;
-	int converted;
+	int converted = 0;
 
 
 	const char *tmp_encoding;
@@ -173,20 +173,13 @@ XChangeTable * xchange_table_open(const char *path, TableType type, const char *
 	{
 		if (_encoding == NULL || strlen(_encoding) == 0) // FIXME: strlen() works fine with UTF-16?
 		{
-			if (encoding_try < ENCODING_TRIES)
-				tmp_encoding = preferred_encoding[encoding_try++];
-			else
+			if (encoding_try >= ENCODING_TRIES)
 				break;
+			tmp_encoding = preferred_encoding[encoding_try++];
 		}
 		else
 		{
 			tmp_encoding= _encoding;
-		}
-		if (tmp_encoding == NULL)
-		{
-			free(contents);
-			free(buffer);
-			return NULL;
 		}
 
 		converted = convert_encoding(tmp_encoding, (char*)contents, filesize, &buffer, &outsize);
