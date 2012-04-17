@@ -596,13 +596,15 @@ static int utf8_is_whitespace(uint8_t byte)
 
 static uint8_t utf8_from_hex(char character)
 {
+	if (!utf8_is_hexdigit(character))
+		return (uint8_t)-1;
+
 	if (character <= UTF8_9)
 		return character - UTF8_0;
 	if (character <= UTF8_F)
 		return character - UTF8_A + 10;
-	if (character <= UTF8_f)
-		return character - UTF8_a + 10;
-	return (uint8_t)-1;
+	// 'a' <= character <= 'f'
+	return character - UTF8_a + 10;
 }
 
 static uint8_t *utf8_get_hex(const char* line, size_t size)
@@ -1239,31 +1241,32 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 
 static int scanUTF8_when_byte_escape(const XChangeTable *table, const char *utf8_text, int utf8_size, uint8_t *bytes)
 {
-	if (table->initial_byte_escape_length +2 + table->final_byte_escape_length <= utf8_size )
-	{
-		if (memcmp(utf8_text, table->initial_byte_escape, table->initial_byte_escape_length) == 0)
-		{
-			const char *next_text = utf8_text + table->initial_byte_escape_length;
-			// Verificar se há dois dígitos hexadecimais e se termina com o escape final
-			if ( utf8_is_hexdigit(*next_text) && utf8_is_hexdigit(*(next_text+1)))
-			{
-				if (table->final_byte_escape == NULL || memcmp(next_text+2, table->final_byte_escape, table->final_byte_escape_length) == 0)
-				{
-					uint8_t value;
-					value = utf8_from_hex(*next_text);
-					value <<= 4;
-					value |= utf8_from_hex(*(next_text+1));
+	// Check if byte escape length fits
+	if (table->initial_byte_escape_length +2 + table->final_byte_escape_length > utf8_size )
+		return 0;
 
-					if (bytes != NULL)
-						*bytes = value;
+	// initial byte escape found?
+	if (memcmp(utf8_text, table->initial_byte_escape, table->initial_byte_escape_length) != 0)
+		return 0;
 
-					return table->initial_byte_escape_length + 2 + table->final_byte_escape_length;
+	const char *next_text = utf8_text + table->initial_byte_escape_length;
+	// Check if there is two hexadecimal digits
+	if ( !utf8_is_hexdigit(*next_text) || !utf8_is_hexdigit(*(next_text+1)))
+		return 0;
 
-				}
-			}
-		}
-	}
-	return 0;
+	// Check if there is the ending of byte escape
+	if (table->final_byte_escape != NULL && memcmp(next_text+2, table->final_byte_escape, table->final_byte_escape_length) != 0)
+		return 0;
+
+	uint8_t value;
+	value = utf8_from_hex(*next_text);
+	value <<= 4;
+	value |= utf8_from_hex(*(next_text+1));
+
+	if (bytes != NULL)
+		*bytes = value;
+
+	return table->initial_byte_escape_length + 2 + table->final_byte_escape_length;
 }
 
 int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, size_t size, uint8_t *bytes)
