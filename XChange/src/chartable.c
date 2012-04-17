@@ -1327,9 +1327,12 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 				continue;
 			}
 		}
+		// Search matching entry
 		for (n = 0; n < table->nentries; n++)
 		{
 			e = table->entries_value[n];
+			if (inpos + e->nvalue > size)
+				continue;
 			if (memcmp(text + inpos, e->value, e->nvalue) == 0)
 			{
 				break;
@@ -1344,6 +1347,7 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 		}
 		else
 		{
+			// Couldn't find an entry
 			return -2;
 		}
 	}
