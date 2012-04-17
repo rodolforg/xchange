@@ -60,7 +60,6 @@ typedef struct List
 
 static EntryList *entry_list_create();
 static void entry_list_destroy(EntryList *list, int destroy_content);
-static EntryList * entry_list_clone(EntryList *list);
 static int entry_list_insert(EntryList *list, Entry *e);
 
 static Entry** entry_list_to_array(const EntryList *list);
@@ -72,7 +71,6 @@ struct XChangeTable
 	int nentries;
 	Entry **entries_key;
 	Entry **entries_value;
-//	Entry *entries;
 	iconv_t icd;
 
 	// Special entries
@@ -402,7 +400,6 @@ static Entry *create_table_entry(uint8_t *key, size_t nkey, uint8_t *value, size
 	e->nkey = nkey;
 	e->nvalue = nvalue;
 	e->type = type;
-	//	e->next = NULL;
 	return e;
 }
 
@@ -450,23 +447,6 @@ static void entry_list_destroy(EntryList *list, int destroy_content)
 	free(list);
 }
 
-static EntryList *entry_list_clone(EntryList *list)
-{
-	assert(list!=NULL);
-	EntryList *clone = entry_list_create();
-	if (clone == NULL)
-		return NULL;
-
-	EntryItem *item = list->first;
-
-	while (item != NULL)
-	{
-		entry_list_insert(clone, item->entry);
-		item = item->next;
-	}
-	return clone;
-}
-
 static int entry_list_insert(EntryList *list, Entry *e)
 {
 	assert(list != NULL);
@@ -486,80 +466,6 @@ static int entry_list_insert(EntryList *list, Entry *e)
 	list->last = new;
 	list->size++;
 	return 1;
-}
-/*
-static int entry_list_insert_ordered(EntryList *list, Entry *e, int (*compare(Entry *, Entry*)))
-{
-	assert(list != NULL);
-	assert(e != NULL);
-	assert(compare != NULL);
-	EntryList *next;
-	EntryList * previous = NULL;
-	EntryList * cur = list;
-	EntryList * new = malloc(sizeof(EntryList));
-	if (new == NULL)
-		return 0;
-	new->entry = e;
-	new->next = NULL;
-	while (cur != NULL)
-	{
-		next = cur->next;
-		int comparison = compare(e, cur->entry);
-		if (comparison == 0)
-		{
-			// add here
-			new->next = cur->next;
-			cur->next = new;
-			break;
-		}
-		else if (comparison < 0)
-		{
-			previous->next = new;
-			new->next = cur;
-			break;
-		}
-		else
-		{
-
-		}
-		previous = cur;
-		cur = next;
-	}
-	return 1;
-}
-*/
-// FIXME: ordenar lista não funciona?
-static void entry_list_sort(EntryList *list, int size)
-{
-	assert(list!=NULL);
-	EntryItem *p1, *p2, *p3;
-	EntryItem *head = list->first;
-	int i, j;
-	for(i = 1; i < size; i++)
-	{
-		p1 = head;
-		p2 = head->next;
-		p3 = p2->next;
-
-		for(j = 1; j <= (size - i) && p3!=NULL; j++)
-		{
-			if(p2->entry->nkey > p3->entry->nkey)
-			{
-				p2->next = p3->next;
-				p3->next = p2;
-				p1->next = p3;
-				p1		= p3;
-				p3		= p2->next;
-			}
-			else
-			{
-				p1 = p2;
-				p2 = p3;
-				p3 = p3->next;
-			}
-		}
-	}
-
 }
 
 static Entry** entry_list_to_array(const EntryList *list)
@@ -677,11 +583,6 @@ static size_t search_byte(const uint8_t *buffer, size_t size, uint8_t byte)
 #define UTF8_f 0x66
 
 #define UTF8_EQUAL_SIGN 0x3D
-
-static int utf8_is_digit(uint8_t byte)
-{
-	return byte >= UTF8_0 && byte <= UTF8_9;
-}
 
 static int utf8_is_hexdigit(uint8_t byte)
 {
