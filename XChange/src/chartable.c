@@ -335,55 +335,15 @@ int xchange_table_get_size(const XChangeTable *table)
 	return table->nentries;
 }
 
-static int get_largest_entry_id(const XChangeTable *table, int by_key)
-{
-	int id = -1;
-	Entry *e;
-	if (table->type == CHARSET_TABLE)
-		return XCHANGE_TABLE_UNKNOWN_SIZE;
-
-	if (by_key)
-	{
-		int n;
-		int max = 0;
-		for (n = 0; n < table->nentries; n++)
-		{
-			e = table->entries_key[n];
-			if (e->nkey > max)
-			{
-				max = e->nkey;
-				id = n;
-				break;
-			}
-		}
-	}
-	else
-	{
-		int n;
-		int max = 0;
-		for (n = 0; n < table->nentries; n++)
-		{
-			e = table->entries_key[n];
-			if (e->nvalue > max)
-			{
-				max = e->nvalue;
-				id = n;
-				break;
-			}
-		}
-	}
-	return id;
-}
-
 int xchange_table_get_largest_entry_length(const XChangeTable *table, int by_key)
 {
 	if (table == NULL)
 		return XCHANGE_TABLE_UNKNOWN_ERROR;
 
-	int id = get_largest_entry_id(table, by_key);
-	if (id < 0)
-		return id;
-	return by_key ? table->entries_key[id]->nkey : table->entries_key[id]->nvalue;
+	if (table->nentries <= 0)
+		return XCHANGE_TABLE_UNKNOWN_ERROR;
+
+	return by_key ? table->entries_key[0]->nkey : table->entries_value[0]->nvalue;
 }
 
 static Entry *create_table_entry(uint8_t *key, size_t nkey, uint8_t *value, size_t nvalue, enum EntryType type)
