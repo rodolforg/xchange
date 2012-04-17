@@ -1099,6 +1099,15 @@ int xchange_table_print_best_stringUTF8(const XChangeTable *table, const uint8_t
 								fake_inleft = inleft + qtd_extra;
 							else
 							{
+								int output_used;
+								output_used = printUTF8_when_unknown(table, (uint8_t*)inbuf, (uint8_t*)outbuf, outleft);
+								if (output_used >= 0)
+								{
+									inbuf++;
+									inleft--;
+									outbuf+=output_used;
+									outleft-=output_used;
+								}
 								error = 1;
 								break;
 							}
