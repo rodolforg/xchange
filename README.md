@@ -25,7 +25,7 @@ Features
 
 TODO
 -------------------------------
-Please check [TODO file](TODO).
+Please check [TODO file](TODO.md).
 
 License
 -------------------------------
