@@ -125,13 +125,13 @@ struct _XChangeHexViewClass
 G_DEFINE_TYPE(XChangeHexView, xchange_hex_view, GTK_TYPE_DRAWING_AREA);
 
 static gboolean
-xchange_hex_view_expose(GtkWidget *hexv, GdkEventExpose *event);
+xchange_hex_view_draw(GtkWidget *hexv, cairo_t *cr);
 
 static gboolean
 xchange_hex_view_configure(GtkWidget *hexv, GdkEventConfigure *event);
 
 static void
-xchange_hex_view_destroy(GtkObject *xchange_hex_view);
+xchange_hex_view_destroy(GtkWidget *xchange_hex_view);
 
 static gboolean
 xchange_hex_view_button_press(GtkWidget *hexv, GdkEventButton *event);
@@ -211,52 +211,49 @@ g_cclosure_marshal_VOID__OBJECT_OBJECT (GClosure *closure,
 static void xchange_hex_view_class_init(XChangeHexViewClass *class)
 {
 	GtkWidgetClass *widget_class;
-	GtkObjectClass *object_class;
 
 	widget_class = GTK_WIDGET_CLASS(class);
-	object_class = (GtkObjectClass *) class;
 
-	widget_class->expose_event = xchange_hex_view_expose;
+	widget_class->draw = xchange_hex_view_draw;
 	widget_class->configure_event = xchange_hex_view_configure;
 	widget_class->button_press_event = xchange_hex_view_button_press;
 	widget_class->button_release_event = xchange_hex_view_button_release;
 	widget_class->motion_notify_event = xchange_hex_view_motion;
 	widget_class->key_press_event = xchange_hex_view_key_press;
+	widget_class->destroy = xchange_hex_view_destroy;
 	class->set_scroll_adjustments = xchange_hex_view_set_scroll_adjustments;
 
 	guint set_scroll_adjustments_signal = g_signal_new(
-			"set-scroll-adjustments", G_TYPE_FROM_CLASS(object_class),
+			"set-scroll-adjustments", G_TYPE_FROM_CLASS(widget_class),
 			G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION, G_STRUCT_OFFSET(
 					XChangeHexViewClass, set_scroll_adjustments), NULL, NULL,
 			g_cclosure_marshal_VOID__OBJECT_OBJECT, G_TYPE_NONE, 2,
 			GTK_TYPE_ADJUSTMENT, GTK_TYPE_ADJUSTMENT);
-	widget_class->set_scroll_adjustments_signal = set_scroll_adjustments_signal;
 
 	guint cursor_moved_signal = g_signal_new("cursor-moved", G_TYPE_FROM_CLASS(
-			object_class), G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+			widget_class), G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
 			G_STRUCT_OFFSET(XChangeHexViewClass, cursor_moved), NULL, NULL,
 			g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	class->cursor_moved_signal = cursor_moved_signal;
 
 	guint edition_mode_changed_signal = g_signal_new("edition-mode-changed", G_TYPE_FROM_CLASS(
-			object_class), G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+			widget_class), G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
 			G_STRUCT_OFFSET(XChangeHexViewClass, editon_mode_changed), NULL, NULL,
 			g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	class->edition_mode_changed_signal = edition_mode_changed_signal;
 
 	guint selection_changed_signal = g_signal_new("selection-changed", G_TYPE_FROM_CLASS(
-			object_class), G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+			widget_class), G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
 			G_STRUCT_OFFSET(XChangeHexViewClass, selection_changed), NULL, NULL,
 			g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	class->selection_changed_signal = selection_changed_signal;
 
 	guint changed_signal = g_signal_new("changed", G_TYPE_FROM_CLASS(
-			object_class), G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
+			widget_class), G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
 			G_STRUCT_OFFSET(XChangeHexViewClass, changed), NULL, NULL,
 			g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
 	class->edition_mode_changed_signal = changed_signal;
 
-	object_class->destroy = xchange_hex_view_destroy;
 }
 
 static void xchange_hex_view_init(XChangeHexView *hexv)
@@ -450,9 +447,9 @@ size_t xchange_hex_view_get_file_size(XChangeHexView *xchange_hex_view)
 	return xchange_file_get_size(hexv->xf);
 }
 
-static void xchange_hex_view_destroy(GtkObject *object)
+static void xchange_hex_view_destroy(GtkWidget *widget)
 {
-	XChangeHexView * hexv = XCHANGE_HEX_VIEW(object);
+	XChangeHexView * hexv = XCHANGE_HEX_VIEW(widget);
 	free(hexv->bytes);
 	hexv->bytes = NULL;
 	if (hexv->table_loaded)
@@ -548,18 +545,13 @@ static gboolean xchange_hex_view_configure(GtkWidget *widget,
 	return FALSE;
 }
 
-static gboolean xchange_hex_view_expose(GtkWidget *hexv, GdkEventExpose *event)
+static gboolean xchange_hex_view_draw(GtkWidget *hexv, cairo_t *cr)
 {
-	cairo_t *cr;
-	cr = gdk_cairo_create(gtk_widget_get_window(hexv));
-
-	cairo_rectangle(cr, event->area.x, event->area.y, event->area.width,
-			event->area.height);
-	cairo_clip(cr);
+/*	cairo_rectangle(cr, event->area.x, event->area.y, event->area.width,*/
+/*			event->area.height);*/
+/*	cairo_clip(cr);*/
 
 	draw(hexv, cr);
-
-	cairo_destroy(cr);
 
 	update_scroll_bounds(XCHANGE_HEX_VIEW(hexv));
 

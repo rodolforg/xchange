@@ -467,7 +467,7 @@ static gboolean carrega_dialogo_do_builder(struct ManipuladorPreferencias *dados
 {
 	GtkBuilder * builder = gtk_builder_new();
 
-	if (!carrega_arquivo_interface(builder, "prefs.gui"))
+	if (!carrega_arquivo_interface(builder, "prefs3.gui"))
 	{
 		g_object_unref(builder);
 		return FALSE;

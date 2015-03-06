@@ -208,7 +208,7 @@ static gboolean mostra_janela(Filehandler *fh)
 	if (builder == NULL)
 		return FALSE;
 
-	if (!carrega_arquivo_interface(builder, "gui.xml"))
+	if (!carrega_arquivo_interface(builder, "gui3.xml"))
 	{
 		g_object_unref(builder);
 		return FALSE;
@@ -802,7 +802,7 @@ G_MODULE_EXPORT void on_action_salvar_copia_activate(GtkAction *action,
 	limpa_barra_de_estado("Arquivo");
 	GtkWidget * dialog = gtk_file_chooser_dialog_new(_("Salvar cópia..."),
 			GTK_WINDOW(main_window), GTK_FILE_CHOOSER_ACTION_SAVE,
-			GTK_STOCK_SAVE, GTK_RESPONSE_OK, GTK_STOCK_CANCEL,
+			_("_Save"), GTK_RESPONSE_OK, _("_Cancel"),
 			GTK_RESPONSE_CANCEL, NULL);
 
 	if (filehandler_get_directory(fh) != NULL)
@@ -840,7 +840,7 @@ G_MODULE_EXPORT void on_action_sair_activate(GtkAction *action, gpointer data)
 }
 
 G_MODULE_EXPORT
-void on_main_window_destroy(GtkObject *object, gpointer data)
+void on_main_window_destroy(GtkWidget *widget, gpointer data)
 {
 	on_action_sair_activate(NULL, data);
 }

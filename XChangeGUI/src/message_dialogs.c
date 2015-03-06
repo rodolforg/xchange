@@ -71,9 +71,9 @@ gint showYesNoCancelDialog (GtkWindow *parent, const gchar *msg)
 	GtkWidget *dialog = gtk_message_dialog_new(parent,
 			GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE,
 			msg);
-	gtk_dialog_add_buttons(GTK_DIALOG(dialog), GTK_STOCK_YES, GTK_RESPONSE_YES,
-			GTK_STOCK_NO, GTK_RESPONSE_NO,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+	gtk_dialog_add_buttons(GTK_DIALOG(dialog), _("_Yes"), GTK_RESPONSE_YES,
+			_("_No"), GTK_RESPONSE_NO,
+			_("Cancel"), GTK_RESPONSE_CANCEL,
 			NULL);
 
 	gtk_window_set_title(GTK_WINDOW(dialog), g_get_application_name());

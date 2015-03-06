@@ -186,7 +186,7 @@ void filehandler_on_action_open_activate (GtkAction *action, gpointer data)
 
 	GtkWidget * dialog = gtk_file_chooser_dialog_new(_("Open file..."),
 			GTK_WINDOW(fh->main_window), GTK_FILE_CHOOSER_ACTION_OPEN,
-			GTK_STOCK_OPEN, GTK_RESPONSE_OK, GTK_STOCK_CANCEL,
+			_("_Open"), GTK_RESPONSE_OK, _("_Cancel"),
 			GTK_RESPONSE_CANCEL, NULL);
 
 	if (fh->last_dir != NULL)
@@ -264,7 +264,7 @@ static gboolean do_save_as_file(Filehandler *fh)
 	GtkWidget * dialog = gtk_file_chooser_dialog_new(_("Save as..."),
 			GTK_WINDOW(fh->main_window),
 			GTK_FILE_CHOOSER_ACTION_SAVE,
-			GTK_STOCK_SAVE, GTK_RESPONSE_OK, GTK_STOCK_CANCEL,
+			_("_Save"), GTK_RESPONSE_OK, _("_Cancel"),
 			GTK_RESPONSE_CANCEL, NULL);
 
 	if (fh->last_dir != NULL)
