@@ -1267,6 +1267,8 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 		iconv_t icd = iconv_open(table->encoding, "utf-8");
 		if (icd == (iconv_t)-1)
 		{
+			if (bytes == NULL)
+				free(tmp2);
 			return -2;
 		}
 
@@ -1274,6 +1276,7 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 		{
 			if (iconv(icd, &inbuf, &inleft, &outbuf, &outleft) == (size_t)-1)
 			{
+				iconv_close(icd);
 				if (bytes == NULL)
 					free(tmp2);
 				return -3;
@@ -1297,6 +1300,7 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 				// 2. Convert until next byte escape sequence
 				if (iconv(icd, &inbuf, &fake_inleft, &outbuf, &outleft) == (size_t)-1)
 				{
+					iconv_close(icd);
 					if (bytes == NULL)
 						free(tmp2);
 					return -3;

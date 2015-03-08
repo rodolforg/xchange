@@ -567,18 +567,6 @@ int main(int argc, char *argv[])
 
 	changes_until_last_save = 0;
 
-	gchar *autores[2] = {NULL, NULL};
-	const char * autor = ">moc.liamg@groflodor< GRoflodoR";
-	int t;
-	t = strlen(autor);
-	char *verdadeiro = malloc(t+1);
-	for (n = 0; n < t; n++)
-		verdadeiro[n] = autor[t-n-1];
-	verdadeiro[t] = 0;
-	autores[0] = verdadeiro;
-	gtk_about_dialog_set_authors (GTK_ABOUT_DIALOG(dialog_sobre), (const gchar**)autores);
-	free(verdadeiro);
-
 	elabora_menu_recentes();
 
 	// Preparando dados de localização
@@ -2142,7 +2130,10 @@ void on_action_substituir_activate(GtkAction *action, gpointer data)
 	}
 
 	if (bytes == NULL)
+	{
+		g_free(parametrosLocalizar);
 		return; // FIXME: Reclamar o motivo: texto em branco?
+	}
 
 	bytes_selecionados = xchange_hex_view_get_selected_bytes(XCHANGE_HEX_VIEW(hexv), &tamanho_selecionado);
 

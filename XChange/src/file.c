@@ -395,7 +395,14 @@ static int xchange_save_bytes(const XChangeFile * xfile, FILE *f)
 				uint8_t *bytes = malloc(section->size);
 				if (bytes == NULL)
 					return 0;
-				fseek(xfile->f, section->data.f_offset, SEEK_SET);
+				if ( fseek(xfile->f, section->data.f_offset, SEEK_SET) != 0)
+				{
+					fprintf(stderr, "Can't seek in file.\n");
+					perror("Reason");
+					free(bytes);
+					return 0;
+				}
+
 				size_t read = fread(bytes, 1, section->size, xfile->f);
 
 				if (read != section->size)
@@ -407,7 +414,15 @@ static int xchange_save_bytes(const XChangeFile * xfile, FILE *f)
 				}
 
 				if (xfile->f == f)
-					fseek(xfile->f, output_pos, SEEK_SET);
+				{
+					if ( fseek(xfile->f, output_pos, SEEK_SET) != 0)
+					{
+						fprintf(stderr, "Can't seek in file.\n");
+						perror("Reason");
+						free(bytes);
+						return 0;
+					}
+				}
 				size_t wrote = fwrite(bytes, 1, section->size, f);
 				free(bytes);
 
