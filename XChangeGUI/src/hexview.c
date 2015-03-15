@@ -2374,7 +2374,7 @@ static gboolean miniedition_create(XChangeHexView* hexv)
 	gtk_container_add (GTK_CONTAINER(frame_externo), vbox);
 	gtk_container_add (GTK_CONTAINER(miniwindow), frame_externo);
 	gtk_widget_show_all(miniwindow);
-	gtk_window_set_transient_for(GTK_WINDOW(miniwindow), NULL);
+	gtk_window_set_transient_for(GTK_WINDOW(miniwindow), GTK_WINDOW(widget));
 
 	g_signal_emit_by_name(text_buffer, "changed", text_buffer, mew, G_TYPE_NONE);
 

@@ -924,6 +924,7 @@ static gchar *usuario_escolhe_arquivo_tabela(gchar **encoding)
 	gtk_window_set_title(GTK_WINDOW(dialog), _("Carregar arquivo de tabela de caracteres"));
 
 
+	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(main_window));
 	gint result = gtk_dialog_run(GTK_DIALOG(dialog));
 
 	if (result == GTK_RESPONSE_OK)
@@ -1050,6 +1051,7 @@ void on_action_escolher_codificacao_activate(GtkAction *action,
 		gpointer data)
 {
 	limpa_barra_de_estado("Codificação de caracteres");
+	gtk_window_set_transient_for(GTK_WINDOW(dialog_codificacoes), GTK_WINDOW(main_window));
 	gint resposta = gtk_dialog_run(GTK_DIALOG(dialog_codificacoes));
 	if (resposta == GTK_RESPONSE_OK)
 	{
@@ -1221,6 +1223,7 @@ static void tenta_ir_para(const char *texto)
 G_MODULE_EXPORT
 void on_action_ir_para_activate(GtkAction *action, gpointer data)
 {
+	gtk_window_set_transient_for(GTK_WINDOW(dialog_ir_para), GTK_WINDOW(main_window));
 	gint result = gtk_dialog_run(GTK_DIALOG(dialog_ir_para));
 
 	if (result == GTK_RESPONSE_OK)
@@ -1399,9 +1402,8 @@ void on_action_recortar_activate(GtkAction *action, gpointer data)
 G_MODULE_EXPORT
 void on_action_sobre_activate(GtkAction *action, gpointer data)
 {
-	gtk_widget_set_parent_window (dialog_sobre, gtk_widget_get_window(main_window));
+	gtk_window_set_transient_for(GTK_WINDOW(dialog_sobre), GTK_WINDOW(main_window));
 	gtk_dialog_run(GTK_DIALOG(dialog_sobre));
-	gtk_widget_hide(dialog_sobre);
 }
 
 G_MODULE_EXPORT
@@ -1412,8 +1414,8 @@ void on_action_abrir_janela_localizar_activate(GtkAction *action, gpointer data)
 	gtk_action_set_visible(action_substituir_todos, FALSE);
 	gtk_action_set_visible(action_localizar, TRUE);
 
+	gtk_window_set_transient_for(GTK_WINDOW(dialog_localizar), GTK_WINDOW(main_window));
 	gtk_dialog_run(GTK_DIALOG(dialog_localizar));
-	//gtk_widget_hide(dialog_localizar);
 }
 
 static struct DadosLocalizar * obtem_parametros_localizar()
@@ -1561,16 +1563,14 @@ void on_action_abrir_janela_substituir_activate(GtkAction *action, gpointer data
 		}
 	}
 
+	gtk_window_set_transient_for(GTK_WINDOW(dialog_localizar), GTK_WINDOW(main_window));
 	gtk_dialog_run(GTK_DIALOG(dialog_localizar));
-	//gtk_widget_hide(dialog_localizar);
 }
 
 G_MODULE_EXPORT
 void on_button_localizar_cancelar_activate(GtkButton *button, gpointer data)
 {
 	gtk_dialog_response(GTK_DIALOG(dialog_localizar), GTK_RESPONSE_CANCEL);
-//	gtk_widget_hide(dialog_localizar);
-
 }
 
 static void inicia_dados_localizar(struct DadosLocalizar *localizar)
