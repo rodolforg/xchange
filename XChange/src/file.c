@@ -353,7 +353,7 @@ static int check_save_overwrite_sanity(const XChangeFile * xfile)
 			}
 			default:
 			{
-				fprintf(stderr, "Can't identity section type (%i).\n", section->type);
+				fprintf(stderr, "Can't identify section type (%i).\n", section->type);
 				return 0;
 			}
 		}
@@ -374,9 +374,7 @@ static int xchange_save_bytes(const XChangeFile * xfile, FILE *f)
 	output_pos = 0;
 
 	if (section == NULL)
-	{
 		return 1;
-	}
 
 	for (; section != NULL; section = section->next)
 	{
@@ -433,7 +431,7 @@ static int xchange_save_bytes(const XChangeFile * xfile, FILE *f)
 			}
 			default:
 			{
-				fprintf(stderr, "Can't identity section type (%i).\n", section->type);
+				fprintf(stderr, "Can't identify section type (%i).\n", section->type);
 				return 0;
 			}
 		}
@@ -456,9 +454,7 @@ int xchange_file_save(const XChangeFile * xfile)
 		return 0;
 	}
 	if (!xchange_file_check_sanity(xfile))
-	{
 		return 0;
-	}
 	fseek(xfile->f, 0 , SEEK_SET);
 	return xchange_save_bytes(xfile, xfile->f);
 }
@@ -484,9 +480,7 @@ int xchange_file_save_as(XChangeFile * xfile, const char *path)
 
 	char *new_name = strdup(path);
 	if (new_name == NULL)
-	{
 		return 0;
-	}
 
 	FILE *f = fopen(path, "wb");
 	if (f == NULL)
@@ -706,7 +700,7 @@ size_t xchange_file_get_bytes(const XChangeFile * xfile, off_t offset, uint8_t *
 			}
 			default:
 			{
-				fprintf(stderr, "Can't identity section type (%i).\n", section->type);
+				fprintf(stderr, "Can't identify section type (%i).\n", section->type);
 				return bytes_read;
 			}
 		}
@@ -1350,7 +1344,7 @@ static int xchange_do_replace_bytes(XChangeFile * xfile, const off_t offset, con
 		}
 		else
 		{
-			fprintf(stderr, "Can't identity section type (%i).\n", s1->type);
+			fprintf(stderr, "Can't identify section type (%i).\n", s1->type);
 			return 0;
 		}
 
@@ -1371,7 +1365,7 @@ static int xchange_do_replace_bytes(XChangeFile * xfile, const off_t offset, con
 	}
 	else
 	{
-		fprintf(stderr, "Can't identity section type (%i).\n", s1->type);
+		fprintf(stderr, "Can't identify section type (%i).\n", s1->type);
 		return 0;
 	}
 
@@ -1391,7 +1385,7 @@ static int xchange_do_replace_bytes(XChangeFile * xfile, const off_t offset, con
 		}
 		else
 		{
-			fprintf(stderr, "Can't identity section type (%i).\n", s2->type);
+			fprintf(stderr, "Can't identify section type (%i).\n", s2->type);
 			return 0;
 		}
 	}

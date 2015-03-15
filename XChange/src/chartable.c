@@ -1254,6 +1254,7 @@ int xchange_table_scan_stringUTF8(const XChangeTable *table, const char *text, s
 		size_t inleft = size;
 		size_t outleft = 4*size;
 		char *tmp, *tmp2;
+		
 		if (bytes == NULL)
 		{
 			tmp2 = malloc(outleft);
