@@ -1335,8 +1335,11 @@ static void draw(GtkWidget *widget, cairo_t *cr)
 				*/
 
 				//cairo_show_text(cr, buffer_texto);
-				pango_layout_set_text (text_layout, novo_texto, novo_resp_texto);
-				g_free(novo_texto);
+				if (novo_texto != NULL)
+				{
+					pango_layout_set_text (text_layout, novo_texto, novo_resp_texto);
+					g_free(novo_texto);
+				}
 				//pango_cairo_show_layout (cr, layout);
 				pango_cairo_show_layout_line (cr, pango_layout_get_line (text_layout, 0));
 
