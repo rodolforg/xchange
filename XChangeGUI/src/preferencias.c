@@ -655,8 +655,6 @@ void on_toggleaction_fonte_padrao_toggled(GtkToggleAction *toggleaction,
 	if (!padrao)
 	{
 		gtk_widget_set_sensitive(dados->janelas.table_fonte_personalizada, TRUE);
-		//gtk_color_button_get_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fonte), &cor);
-		//alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fonte));
 		xchange_hex_view_set_font_color(XCHANGE_HEX_VIEW(hexv), dados->preferencias->cor_fonte);
 		// Nomes e tamanho....
 		xchange_hex_view_set_font_size(XCHANGE_HEX_VIEW(hexv), dados->preferencias->tamanho_fonte);
@@ -787,8 +785,6 @@ void on_toggleaction_selecao_padrao_toggled(GtkToggleAction *toggleaction,
 	{
 		GdkRGBA cor;
 		gtk_widget_set_sensitive(dados->janelas.table_selecao_personalizada, TRUE);
-		//gtk_color_button_get_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_realce_selecao), &cor);
-		//alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_realce_selecao));
 		cor = dados->preferencias->cor_selecao;
 		xchange_hex_view_set_selection_color(XCHANGE_HEX_VIEW(hexv), cor);
 	}
@@ -827,13 +823,9 @@ void on_toggleaction_cursor_padrao_toggled(GtkToggleAction *toggleaction,
 		GdkRGBA cor;
 		gtk_widget_set_sensitive(dados->janelas.table_cursor_personalizado, TRUE);
 		// Contorno
-		//gtk_color_button_get_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_contorno_cursor), &cor);
-		//alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_contorno_cursor));
 		cor = dados->preferencias->cor_contorno_cursor;
 		xchange_hex_view_set_cursor_foreground_color(XCHANGE_HEX_VIEW(hexv), cor);
 		// Fundo
-		//gtk_color_button_get_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fundo_cursor), &cor);
-		//alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fundo_cursor));
 		cor = dados->preferencias->cor_fundo_cursor;
 		xchange_hex_view_set_cursor_background_color(XCHANGE_HEX_VIEW(hexv), cor);
 	}
