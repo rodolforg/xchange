@@ -24,6 +24,10 @@
 #include "file.h"
 #include "chartable.h"
 
+#if ! GTK_CHECK_VERSION(3,0,0)
+#include "xgdkrgba.h"
+#endif
+
 G_BEGIN_DECLS
 
 typedef struct _XChangeHexView XChangeHexView;
@@ -74,7 +78,7 @@ gboolean xchange_hex_view_is_text_panel_visible(const XChangeHexView *xchange_he
 void xchange_hex_view_set_font_size(XChangeHexView *xchange_hex_view, gint font_size);
 void xchange_hex_view_set_byte_font_name(XChangeHexView *xchange_hex_view, const gchar *font_name);
 void xchange_hex_view_set_text_font_name(XChangeHexView *xchange_hex_view, const gchar *font_name);
-void xchange_hex_view_set_font_color(XChangeHexView *xchange_hex_view, GdkColor color, guint16 alpha);
+void xchange_hex_view_set_font_color(XChangeHexView *xchange_hex_view, const GdkRGBA color);
 void xchange_hex_view_set_font_color_default(XChangeHexView *xchange_hex_view);
 
 void xchange_hex_view_set_byte_row_length(XChangeHexView *xchange_hex_view, gushort byte_row_length);
@@ -90,14 +94,14 @@ gboolean xchange_hex_view_get_selection_bounds(XChangeHexView *xchange_hex_view,
 gboolean xchange_hex_view_get_has_selection(const XChangeHexView *xchange_hex_view);
 void xchange_hex_view_select(XChangeHexView *xchange_hex_view, off_t from, size_t size);
 void xchange_hex_view_delete_selection(XChangeHexView *xchange_hex_view);
-void xchange_hex_view_set_selection_color(XChangeHexView *xchange_hex_view, GdkColor color, guint16 alpha);
+void xchange_hex_view_set_selection_color(XChangeHexView *xchange_hex_view, const GdkRGBA color);
 void xchange_hex_view_set_selection_color_default(XChangeHexView *xchange_hex_view);
 
 off_t xchange_hex_view_get_cursor(const XChangeHexView *xchange_hex_view);
 void xchange_hex_view_place_cursor(XChangeHexView *xchange_hex_view, off_t offset);
-void xchange_hex_view_set_cursor_background_color(XChangeHexView *xchange_hex_view, GdkColor color, guint16 alpha);
+void xchange_hex_view_set_cursor_background_color(XChangeHexView *xchange_hex_view, const GdkRGBA color);
 void xchange_hex_view_set_cursor_background_color_default(XChangeHexView *xchange_hex_view);
-void xchange_hex_view_set_cursor_foreground_color(XChangeHexView *xchange_hex_view, GdkColor color, guint16 alpha);
+void xchange_hex_view_set_cursor_foreground_color(XChangeHexView *xchange_hex_view, const GdkRGBA color);
 void xchange_hex_view_set_cursor_foreground_color_default(XChangeHexView *xchange_hex_view);
 
 //gchar *xchange_hex_view_get_text(XChangeHexView *xchange_hex_view, off_t offset, size_t size);

@@ -89,16 +89,18 @@ void inicia_preferencias_padrao(Preferencias *preferencias)
 	preferencias->fonte_padrao = TRUE;
 		preferencias->familia_fonte = g_strdup("Mono");
 		preferencias->familia_fonte_texto = g_strdup("Mono");
-		gdk_color_parse("#000000", &preferencias->cor_fonte);
-		preferencias->alfa_fonte = 65535;
+		gdk_rgba_parse(&preferencias->cor_fonte, "#000000");
+		preferencias->cor_fonte.alpha = 65535;
+
 	preferencias->selecao_padrao = TRUE;
-		gdk_color_parse("#8080f3", &preferencias->cor_selecao);
-		preferencias->alfa_selecao = 32768;
+		gdk_rgba_parse(&preferencias->cor_selecao, "#8080f3");
+		preferencias->cor_selecao.alpha = 32768;
+
 	preferencias->cursor_padrao = TRUE;
-		gdk_color_parse("#f3f3f3", &preferencias->cor_contorno_cursor);
-		preferencias->alfa_contorno_cursor = 45875;
-		gdk_color_parse("#cdcdcd", &preferencias->cor_fundo_cursor);
-		preferencias->alfa_fundo_cursor = 65535;
+		gdk_rgba_parse(&preferencias->cor_contorno_cursor, "#f3f3f3");
+		preferencias->cor_contorno_cursor.alpha = 45875;
+		gdk_rgba_parse(&preferencias->cor_fundo_cursor, "#cdcdcd");
+		preferencias->cor_fundo_cursor.alpha = 65535;
 
 	preferencias->salvar_posicao_tamanho_janela = FALSE;
 		preferencias->janela_x = 0;
@@ -201,7 +203,7 @@ static void ler_preferencia_texto(GKeyFile *keyfile, const gchar *grupo, const c
 	}
 }
 
-static void ler_preferencia_cor(GKeyFile *keyfile, const gchar *grupo, const char *chave, GdkColor *cor, guint16 *alfa)
+static void ler_preferencia_cor(GKeyFile *keyfile, const gchar *grupo, const char *chave, GdkRGBA *cor)
 {
 	GError *erro = NULL;
 	gint *lista;
@@ -217,8 +219,8 @@ static void ler_preferencia_cor(GKeyFile *keyfile, const gchar *grupo, const cha
 				cor->green = lista[1];
 				cor->blue = lista[2];
 			}
-			if (tamanho >= 4 && alfa != NULL)
-				*alfa = lista[3];
+			if (tamanho >= 4)
+				cor->alpha = lista[3];
 		}
 	}
 	if (erro != NULL)
@@ -299,20 +301,20 @@ static void interpreta_preferencias(GKeyFile *keyfile, struct Preferencias * pre
 	ler_preferencia_inteiro(keyfile, "Aparência", "Tamanho da fonte", &preferencias->tamanho_fonte);
 	if (!preferencias->fonte_padrao)
 		xchange_hex_view_set_font_size(XCHANGE_HEX_VIEW(hexv), preferencias->tamanho_fonte);
-	ler_preferencia_cor(keyfile, "Aparência", "Cor da fonte", &preferencias->cor_fonte, &preferencias->alfa_fonte);
+	ler_preferencia_cor(keyfile, "Aparência", "Cor da fonte", &preferencias->cor_fonte);
 	if (!preferencias->fonte_padrao)
-		xchange_hex_view_set_font_color(XCHANGE_HEX_VIEW(hexv), preferencias->cor_fonte, preferencias->alfa_fonte);
+		xchange_hex_view_set_font_color(XCHANGE_HEX_VIEW(hexv), preferencias->cor_fonte);
 	ler_preferencia_booleano(keyfile, "Aparência", "Seleção padrão", &preferencias->selecao_padrao);
-	ler_preferencia_cor(keyfile, "Aparência", "Cor da seleção", &preferencias->cor_selecao, &preferencias->alfa_selecao);
+	ler_preferencia_cor(keyfile, "Aparência", "Cor da seleção", &preferencias->cor_selecao);
 	if (!preferencias->selecao_padrao)
-		xchange_hex_view_set_selection_color(XCHANGE_HEX_VIEW(hexv), preferencias->cor_selecao, preferencias->alfa_selecao);
+		xchange_hex_view_set_selection_color(XCHANGE_HEX_VIEW(hexv), preferencias->cor_selecao);
 	ler_preferencia_booleano(keyfile, "Aparência", "Cursor padrão", &preferencias->cursor_padrao);
-	ler_preferencia_cor(keyfile, "Aparência", "Cor de contorno do cursor", &preferencias->cor_contorno_cursor, &preferencias->alfa_contorno_cursor);
-	ler_preferencia_cor(keyfile, "Aparência", "Cor de fundo do cursor", &preferencias->cor_fundo_cursor, &preferencias->alfa_fundo_cursor);
+	ler_preferencia_cor(keyfile, "Aparência", "Cor de contorno do cursor", &preferencias->cor_contorno_cursor);
+	ler_preferencia_cor(keyfile, "Aparência", "Cor de fundo do cursor", &preferencias->cor_fundo_cursor);
 	if (!preferencias->cursor_padrao)
 	{
-		xchange_hex_view_set_cursor_background_color(XCHANGE_HEX_VIEW(hexv), preferencias->cor_fundo_cursor, preferencias->alfa_fundo_cursor);
-		xchange_hex_view_set_cursor_foreground_color(XCHANGE_HEX_VIEW(hexv), preferencias->cor_contorno_cursor, preferencias->alfa_contorno_cursor);
+		xchange_hex_view_set_cursor_background_color(XCHANGE_HEX_VIEW(hexv), preferencias->cor_fundo_cursor);
+		xchange_hex_view_set_cursor_foreground_color(XCHANGE_HEX_VIEW(hexv), preferencias->cor_contorno_cursor);
 	}
 	ler_preferencia_booleano(keyfile, "Aparência", "Salva posição da janela", &preferencias->salvar_posicao_tamanho_janela);
 	// TODO: Carregar dimensões e posição da janela
@@ -542,18 +544,14 @@ static void configura_dialogo(const struct ManipuladorPreferencias *dados)
 	gtk_font_button_set_font_name(GTK_FONT_BUTTON(dados->janelas.fontbutton_painel_texto), nome_fonte);
 	g_free(nome_fonte);
 
-	gtk_color_button_set_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fonte), &dados->preferencias->cor_fonte);
-	gtk_color_button_set_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fonte), dados->preferencias->alfa_fonte);
+	gtk_color_button_set_rgba(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fonte), &dados->preferencias->cor_fonte);
 		// Seleção
 	gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(dados->janelas.toggleaction_selecao_padrao), dados->preferencias->selecao_padrao);
-	gtk_color_button_set_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_realce_selecao), &dados->preferencias->cor_selecao);
-	gtk_color_button_set_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_realce_selecao), dados->preferencias->alfa_selecao);
+	gtk_color_button_set_rgba(GTK_COLOR_BUTTON(dados->janelas.colorbutton_realce_selecao), &dados->preferencias->cor_selecao);
 		// Cursor
 	gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(dados->janelas.toggleaction_cursor_padrao), dados->preferencias->cursor_padrao);
-	gtk_color_button_set_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_contorno_cursor), &dados->preferencias->cor_contorno_cursor);
-	gtk_color_button_set_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_contorno_cursor), dados->preferencias->alfa_contorno_cursor);
-	gtk_color_button_set_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fundo_cursor), &dados->preferencias->cor_fundo_cursor);
-	gtk_color_button_set_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fundo_cursor), dados->preferencias->alfa_fundo_cursor);
+	gtk_color_button_set_rgba(GTK_COLOR_BUTTON(dados->janelas.colorbutton_contorno_cursor), &dados->preferencias->cor_contorno_cursor);
+	gtk_color_button_set_rgba(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fundo_cursor), &dados->preferencias->cor_fundo_cursor);
 		// Salvar pos/tam janela
 	gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(dados->janelas.toggleaction_salva_pos_dim_janela), dados->preferencias->salvar_posicao_tamanho_janela);
 
@@ -659,7 +657,7 @@ void on_toggleaction_fonte_padrao_toggled(GtkToggleAction *toggleaction,
 		gtk_widget_set_sensitive(dados->janelas.table_fonte_personalizada, TRUE);
 		//gtk_color_button_get_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fonte), &cor);
 		//alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fonte));
-		xchange_hex_view_set_font_color(XCHANGE_HEX_VIEW(hexv), dados->preferencias->cor_fonte, dados->preferencias->alfa_fonte);
+		xchange_hex_view_set_font_color(XCHANGE_HEX_VIEW(hexv), dados->preferencias->cor_fonte);
 		// Nomes e tamanho....
 		xchange_hex_view_set_font_size(XCHANGE_HEX_VIEW(hexv), dados->preferencias->tamanho_fonte);
 		gchar *nome_fonte;
@@ -767,16 +765,14 @@ void on_colorbutton_fonte_color_set(GtkColorButton *colorbutton,
 		gpointer data)
 {
 	struct ManipuladorPreferencias *dados = data;
-	GdkColor cor;
-	guint16 alfa;
-	gtk_color_button_get_color(GTK_COLOR_BUTTON(colorbutton), &cor);
-	alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(colorbutton));
-	xchange_hex_view_set_font_color(XCHANGE_HEX_VIEW(dados->janelas.hexv), cor, alfa);
+	GdkRGBA cor;
+	gtk_color_button_get_rgba(GTK_COLOR_BUTTON(colorbutton), &cor);
+	cor.alpha = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(colorbutton));
+	xchange_hex_view_set_font_color(XCHANGE_HEX_VIEW(dados->janelas.hexv), cor);
 
-	gint listaRGBA[4] = {cor.red, cor.green, cor.blue, alfa};
+	gint listaRGBA[4] = {cor.red, cor.green, cor.blue, cor.alpha};
 	g_key_file_set_integer_list(dados->keyfile, "Aparência", "Cor da fonte", listaRGBA, 4);
 	dados->preferencias->cor_fonte = cor;
-	dados->preferencias->alfa_fonte = alfa;
 }
 
 
@@ -789,14 +785,12 @@ void on_toggleaction_selecao_padrao_toggled(GtkToggleAction *toggleaction,
 	gboolean padrao = gtk_toggle_action_get_active(toggleaction);
 	if (!padrao)
 	{
-		GdkColor cor;
-		guint16 alfa;
+		GdkRGBA cor;
 		gtk_widget_set_sensitive(dados->janelas.table_selecao_personalizada, TRUE);
 		//gtk_color_button_get_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_realce_selecao), &cor);
 		//alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_realce_selecao));
 		cor = dados->preferencias->cor_selecao;
-		alfa = dados->preferencias->alfa_selecao;
-		xchange_hex_view_set_selection_color(XCHANGE_HEX_VIEW(hexv), cor, alfa);
+		xchange_hex_view_set_selection_color(XCHANGE_HEX_VIEW(hexv), cor);
 	}
 	else
 	{
@@ -812,16 +806,13 @@ void on_colorbutton_realce_selecao_color_set(GtkColorButton *colorbutton,
 		gpointer data)
 {
 	struct ManipuladorPreferencias *dados = data;
-	GdkColor cor;
-	guint16 alfa;
-	gtk_color_button_get_color(GTK_COLOR_BUTTON(colorbutton), &cor);
-	alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(colorbutton));
-	xchange_hex_view_set_selection_color(XCHANGE_HEX_VIEW(dados->janelas.hexv), cor, alfa);
+	GdkRGBA cor;
+	gtk_color_button_get_rgba(GTK_COLOR_BUTTON(colorbutton), &cor);
+	xchange_hex_view_set_selection_color(XCHANGE_HEX_VIEW(dados->janelas.hexv), cor);
 
-	gint listaRGBA[4] = {cor.red, cor.green, cor.blue, alfa};
+	gint listaRGBA[4] = {cor.red, cor.green, cor.blue, cor.alpha};
 	g_key_file_set_integer_list(dados->keyfile, "Aparência", "Cor da seleção", listaRGBA, 4);
 	dados->preferencias->cor_selecao = cor;
-	dados->preferencias->alfa_selecao = alfa;
 }
 
 G_MODULE_EXPORT
@@ -833,21 +824,18 @@ void on_toggleaction_cursor_padrao_toggled(GtkToggleAction *toggleaction,
 	gboolean padrao = gtk_toggle_action_get_active(toggleaction);
 	if (!padrao)
 	{
-		GdkColor cor;
-		guint16 alfa;
+		GdkRGBA cor;
 		gtk_widget_set_sensitive(dados->janelas.table_cursor_personalizado, TRUE);
 		// Contorno
 		//gtk_color_button_get_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_contorno_cursor), &cor);
 		//alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_contorno_cursor));
 		cor = dados->preferencias->cor_contorno_cursor;
-		alfa = dados->preferencias->alfa_contorno_cursor;
-		xchange_hex_view_set_cursor_foreground_color(XCHANGE_HEX_VIEW(hexv), cor, alfa);
+		xchange_hex_view_set_cursor_foreground_color(XCHANGE_HEX_VIEW(hexv), cor);
 		// Fundo
 		//gtk_color_button_get_color(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fundo_cursor), &cor);
 		//alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(dados->janelas.colorbutton_fundo_cursor));
 		cor = dados->preferencias->cor_fundo_cursor;
-		alfa = dados->preferencias->alfa_fundo_cursor;
-		xchange_hex_view_set_cursor_background_color(XCHANGE_HEX_VIEW(hexv), cor, alfa);
+		xchange_hex_view_set_cursor_background_color(XCHANGE_HEX_VIEW(hexv), cor);
 	}
 	else
 	{
@@ -865,17 +853,13 @@ void on_colorbutton_contorno_cursor_color_set(GtkColorButton *colorbutton,
 		gpointer data)
 {
 	struct ManipuladorPreferencias *dados = data;
-	GdkColor cor;
-	guint16 alfa;
-	gtk_color_button_get_color(GTK_COLOR_BUTTON(colorbutton), &cor);
-	alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(colorbutton));
-	xchange_hex_view_set_cursor_foreground_color(XCHANGE_HEX_VIEW(dados->janelas.hexv), cor, alfa);
+	GdkRGBA cor;
+	gtk_color_button_get_rgba(GTK_COLOR_BUTTON(colorbutton), &cor);
+	xchange_hex_view_set_cursor_foreground_color(XCHANGE_HEX_VIEW(dados->janelas.hexv), cor);
 
-	gint listaRGBA[4] = {cor.red, cor.green, cor.blue, alfa};
+	gint listaRGBA[4] = {cor.red, cor.green, cor.blue, cor.alpha};
 	g_key_file_set_integer_list(dados->keyfile, "Aparência", "Cor de contorno do cursor", listaRGBA, 4);
 	dados->preferencias->cor_contorno_cursor = cor;
-	dados->preferencias->alfa_contorno_cursor = alfa;
-
 }
 
 G_MODULE_EXPORT
@@ -883,16 +867,13 @@ void on_colorbutton_fundo_cursor_color_set(GtkColorButton *colorbutton,
 		gpointer data)
 {
 	struct ManipuladorPreferencias *dados = data;
-	GdkColor cor;
-	guint16 alfa;
-	gtk_color_button_get_color(GTK_COLOR_BUTTON(colorbutton), &cor);
-	alfa = gtk_color_button_get_alpha(GTK_COLOR_BUTTON(colorbutton));
-	xchange_hex_view_set_cursor_background_color(XCHANGE_HEX_VIEW(dados->janelas.hexv), cor, alfa);
+	GdkRGBA cor;
+	gtk_color_button_get_rgba(GTK_COLOR_BUTTON(colorbutton), &cor);
+	xchange_hex_view_set_cursor_background_color(XCHANGE_HEX_VIEW(dados->janelas.hexv), cor);
 
-	gint listaRGBA[4] = {cor.red, cor.green, cor.blue, alfa};
+	gint listaRGBA[4] = {cor.red, cor.green, cor.blue, cor.alpha};
 	g_key_file_set_integer_list(dados->keyfile, "Aparência", "Cor de fundo do cursor", listaRGBA, 4);
 	dados->preferencias->cor_fundo_cursor= cor;
-	dados->preferencias->alfa_fundo_cursor = alfa;
 }
 
 G_MODULE_EXPORT

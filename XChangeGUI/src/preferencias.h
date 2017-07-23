@@ -23,6 +23,10 @@
 #include <gtk/gtk.h>
 #include "hexview.h"
 
+#if ! GTK_CHECK_VERSION(3,0,0)
+#include "xgdkrgba.h"
+#endif
+
 // Ao adicionar um campo, iniciá-lo em inicia_preferencias_padrao().
 // Acrescentar a leitura em interpreta_preferencias()
 // Configurar o diálogo de preferência em configura_dialogo()
@@ -43,18 +47,14 @@ typedef struct Preferencias
 	gchar *familia_fonte;
 	gchar *familia_fonte_texto;
 	gint tamanho_fonte;
-	GdkColor cor_fonte;
-	guint16 alfa_fonte;
+	GdkRGBA cor_fonte;
 		// Seleção
 	gboolean selecao_padrao;
-	GdkColor cor_selecao;
-	guint16 alfa_selecao;
+	GdkRGBA cor_selecao;
 		// Cursor
 	gboolean cursor_padrao;
-	GdkColor cor_contorno_cursor;
-	guint16 alfa_contorno_cursor;
-	GdkColor cor_fundo_cursor;
-	guint16 alfa_fundo_cursor;
+	GdkRGBA cor_contorno_cursor;
+	GdkRGBA cor_fundo_cursor;
 
 	gboolean salvar_posicao_tamanho_janela;
 		gint janela_x, janela_y;

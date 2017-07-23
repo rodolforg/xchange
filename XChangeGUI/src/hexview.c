@@ -1487,19 +1487,18 @@ void xchange_hex_view_set_text_font_name(XChangeHexView *xchange_hex_view, const
 	}
 }
 
-static cairo_pattern_t *converte_cor_cairo(const GdkColor *color, guint16 alpha)
+static cairo_pattern_t *converte_cor_cairo(const GdkRGBA *color)
 {
-	return cairo_pattern_create_rgba((gdouble)color->red/65536.0f,
-			(gdouble)color->green/65536.0f, (gdouble)color->blue/65536.0f, (gdouble)alpha/65536.0f);
+	return cairo_pattern_create_rgba(color->red, color->green, color->blue, color->alpha);
 }
 
-void xchange_hex_view_set_font_color(XChangeHexView *xchange_hex_view, GdkColor color, guint16 alpha)
+void xchange_hex_view_set_font_color(XChangeHexView *xchange_hex_view, const GdkRGBA color)
 {
 	if (!XCHANGE_IS_HEX_VIEW(xchange_hex_view))
 		return;
 
 	cairo_pattern_destroy(xchange_hex_view->font_color);
-	xchange_hex_view->font_color = converte_cor_cairo(&color, alpha);
+	xchange_hex_view->font_color = converte_cor_cairo(&color);
 	cairo_pattern_reference (xchange_hex_view->font_color);
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
 }
@@ -1516,13 +1515,13 @@ void xchange_hex_view_set_font_color_default(XChangeHexView *xchange_hex_view)
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
 }
 
-void xchange_hex_view_set_cursor_foreground_color(XChangeHexView *xchange_hex_view, GdkColor color, guint16 alpha)
+void xchange_hex_view_set_cursor_foreground_color(XChangeHexView *xchange_hex_view, const GdkRGBA color)
 {
 	if (!XCHANGE_IS_HEX_VIEW(xchange_hex_view))
 		return;
 
 	cairo_pattern_destroy(xchange_hex_view->cursor_foreground_color);
-	xchange_hex_view->cursor_foreground_color = converte_cor_cairo(&color, alpha);
+	xchange_hex_view->cursor_foreground_color = converte_cor_cairo(&color);
 	cairo_pattern_reference (xchange_hex_view->cursor_foreground_color);
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
 }
@@ -1539,13 +1538,13 @@ void xchange_hex_view_set_cursor_foreground_color_default(XChangeHexView *xchang
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
 }
 
-void xchange_hex_view_set_cursor_background_color(XChangeHexView *xchange_hex_view, GdkColor color, guint16 alpha)
+void xchange_hex_view_set_cursor_background_color(XChangeHexView *xchange_hex_view, const GdkRGBA color)
 {
 	if (!XCHANGE_IS_HEX_VIEW(xchange_hex_view))
 		return;
 
 	cairo_pattern_destroy(xchange_hex_view->cursor_background_color);
-	xchange_hex_view->cursor_background_color = converte_cor_cairo(&color, alpha);
+	xchange_hex_view->cursor_background_color = converte_cor_cairo(&color);
 	cairo_pattern_reference (xchange_hex_view->cursor_background_color);
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
 }
@@ -1562,13 +1561,13 @@ void xchange_hex_view_set_cursor_background_color_default(XChangeHexView *xchang
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
 }
 
-void xchange_hex_view_set_selection_color(XChangeHexView *xchange_hex_view, GdkColor color, guint16 alpha)
+void xchange_hex_view_set_selection_color(XChangeHexView *xchange_hex_view, const GdkRGBA color)
 {
 	if (!XCHANGE_IS_HEX_VIEW(xchange_hex_view))
 		return;
 
 	cairo_pattern_destroy(xchange_hex_view->selection_color);
-	xchange_hex_view->selection_color = converte_cor_cairo(&color, alpha);
+	xchange_hex_view->selection_color = converte_cor_cairo(&color);
 	cairo_pattern_reference (xchange_hex_view->selection_color);
 	gtk_widget_queue_draw(GTK_WIDGET(xchange_hex_view));
 }
