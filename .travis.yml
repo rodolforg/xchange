@@ -1,0 +1,23 @@
+language: c
+
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "q9yL/gBQHeXXFe7v2WetO2nO01H4XgaFCaZhK3sGlEnyMJ8RVMzjiULMVZzsKJS0LK/gsUrSp0BBfmdG+JkmH/5CN1nTUsQVjTNKIPcWZiJFuWoI3Dv2SYkEkzkv6B4rGidMIjpH/DuG+6n+w+hFZt3ygVEOt72qGq8tk4a9RVMDyY3QBX5/Vu38eTd4EMpdZXv8w/nwC4Q+SGAX8M9gwoCOlSc2m4vTDmTYa1CqqXzEyDytnRRTkZ2dMVq/HsLXddzRV8tIvY5my7j5RROBTBsKIVizTva+s+dNl+h1bOcM+fFKnXFRQoewjweFKSojspl6vRBigvXDnkpvJCFxwhndpkGIgUoyAKkJZ7/HIZG2ICthx7O0nA2PDjfVEV+9b91n68NqrVPUjvjwsas/Abhoc8OSxYUjSq4kvWH4DctOosFfJgg/uq29u3h/qgoL6pImNam/CwsvC20HCxQxPjUW07GcX2Ng4r/Z/t0UUZe0Jm5/6ERP1Y984aZwpPwr3riltznI/Racxqg6nb5BU4mbNDT2+0utQL9fm+auUoeEkBqw585QrHH8i9aCwdbYzxUHi0uFfmZom+OmcpkR/R6rt3fwhMAacuBNRJnjkUtl7TQYTIcGoKYf2H9kEFUxwytlcWVd5Aj+U+hHAbxAQBKtV82EWNmvPAciGGBER/4="
+
+before_install:
+      - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+
+install:
+      - sudo apt-get install libgtk-3-dev
+
+script: make -j 4
+
+addons:
+  coverity_scan:
+    project:
+      name: "rodolforg/xchange"
+#    build_command_prepend: "./configure; make clean"
+    build_command:   "make -j 4"
+    branch_pattern: coverity_scan
