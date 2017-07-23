@@ -2318,7 +2318,11 @@ static gboolean miniedition_create(XChangeHexView* hexv)
 	gtk_window_move(GTK_WINDOW(miniwindow), par_x+hexv_x + p.x, par_y+hexv_y + p.y + hexv->font_size + 1);
 
 	GtkWidget *frame_externo = gtk_frame_new(NULL);
+#if GTK_CHECK_VERSION(3,0,0)
+	GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 1);
+#else
 	GtkWidget *vbox = gtk_vbox_new(FALSE, 1);
+#endif
 	gtk_container_set_border_width (GTK_CONTAINER(vbox), 3);
 
 	GtkWidget * widget_text = gtk_text_view_new();
