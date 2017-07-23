@@ -3021,7 +3021,7 @@ gboolean xchange_hex_view_load_table_file(XChangeHexView *xchange_hex_view,
 	return TRUE;
 }
 
-void xchange_hex_view_set_table(XChangeHexView *xchange_hex_view, const XChangeTable *xt)
+void xchange_hex_view_set_table(XChangeHexView *xchange_hex_view, XChangeTable *xt)
 {
 	if (!XCHANGE_IS_HEX_VIEW(xchange_hex_view) || xt == NULL)
 		return;

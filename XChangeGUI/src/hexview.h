@@ -46,7 +46,7 @@ void xchange_hex_view_close_file(XChangeHexView *xchange_hex_view);
 size_t xchange_hex_view_get_file_size(XChangeHexView *xchange_hex_view);
 
 gboolean xchange_hex_view_load_table_file(XChangeHexView *xchange_hex_view, gchar *filename, gchar *encoding);
-void xchange_hex_view_set_table(XChangeHexView *xchange_hex_view, const XChangeTable *xt);
+void xchange_hex_view_set_table(XChangeHexView *xchange_hex_view, XChangeTable *xt);
 
 void xchange_hex_view_goto(XChangeHexView *xchange_hex_view, off_t offset);
 
