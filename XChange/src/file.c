@@ -224,7 +224,10 @@ XChangeFile * xchange_file_open(const char *path, const char *mode)
 	}
 	XChangeFile *xf = xchange_file_openf(f);
 	if (xf == NULL)
+	{
+		fclose(f);
 		return NULL;
+	}
 
 	// Keep the filepath and file handler
 	if (path != NULL)
@@ -244,10 +247,7 @@ static XChangeFile * xchange_file_openf(FILE *f)
 	// Try to create hexchange handler
 	XChangeFile *xf = malloc(sizeof(struct XChangeFile));
 	if (xf == NULL)
-	{
-		fclose(f);
 		return NULL;
-	}
 
 	xchange_file_init(xf);
 
@@ -258,7 +258,6 @@ static XChangeFile * xchange_file_openf(FILE *f)
 		// Fill size field
 		if (fseek(f, 0, SEEK_END) != 0)
 		{
-			fclose(f);
 			free(xf);
 			return NULL;
 		}
@@ -266,7 +265,6 @@ static XChangeFile * xchange_file_openf(FILE *f)
 		xf->size = ftell(f);
 		if ((long) xf->size == -1)
 		{
-			fclose(f);
 			free(xf);
 			return NULL;
 		}
@@ -285,14 +283,12 @@ static XChangeFile * xchange_file_openf(FILE *f)
 
 			if (fseek(f, 0, SEEK_SET) != 0)
 			{
-				fclose(f);
 				free(xf);
 				return NULL;
 			}
 			xf->sections = xchange_new_section(XCF_SECTION_MEMORY, xf->size, 0);
 			if (xf->sections == NULL)
 			{
-				fclose(f);
 				free(xf);
 				return NULL;
 			}
@@ -300,7 +296,6 @@ static XChangeFile * xchange_file_openf(FILE *f)
 			{
 				if (ferror(f))
 				{
-					fclose(f);
 					free(xf->sections);
 					free(xf);
 					return NULL;
@@ -313,7 +308,6 @@ static XChangeFile * xchange_file_openf(FILE *f)
 			xf->sections = xchange_new_section(XCF_SECTION_FILE, xf->size, 0);
 			if (xf->sections == NULL)
 			{
-				fclose(f);
 				free(xf);
 				return NULL;
 			}
