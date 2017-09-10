@@ -168,6 +168,8 @@ struct XChangeFile
 	FileAction * history_redo;
 };
 
+static XChangeFile * xchange_file_openf(FILE *f);
+
 XChangeFile * xchange_file_open(const char *path, const char *mode)
 {
 	FILE *f = NULL;
@@ -177,7 +179,26 @@ XChangeFile * xchange_file_open(const char *path, const char *mode)
 		if (f == NULL)
 			return NULL;
 	}
+	XChangeFile *xf = xchange_file_openf(f);
+	if (xf == NULL)
+		return NULL;
 
+	// Keep the filepath and file handler
+	if (path != NULL)
+	{
+		xf->filename = strdup(path);
+		if (xf->filename == NULL)
+		{
+			fclose(f);
+			free(xf);
+			return NULL;
+		}
+	}
+	return xf;
+}
+
+static XChangeFile * xchange_file_openf(FILE *f)
+{
 	// Try to create hexchange handler
 	XChangeFile *xf = malloc(sizeof(struct XChangeFile));
 	if (xf == NULL)
@@ -220,21 +241,7 @@ XChangeFile * xchange_file_open(const char *path, const char *mode)
 		xf->size = 0;
 	}
 
-	// Keep the filepath and file handler
-	if (path != NULL)
-	{
-		xf->filename = strdup(path);
-		if (xf->filename == NULL)
-		{
-			fclose(f);
-			free(xf);
-			return NULL;
-		}
-	}
-	else
-	{
-		xf->filename = NULL;
-	}
+	xf->filename = NULL;
 
 	// Create initial section...
 	if (xf->size == 0)
