@@ -190,7 +190,7 @@ XChangeFile * xchange_file_open(const char *path, const char *mode)
 		if (xf->filename == NULL)
 		{
 			fclose(f);
-			free(xf);
+			xchange_file_close(xf);
 			return NULL;
 		}
 	}
