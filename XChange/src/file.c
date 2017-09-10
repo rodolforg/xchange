@@ -168,6 +168,49 @@ struct XChangeFile
 	FileAction * history_redo;
 };
 
+static void xchange_file_init(XChangeFile *xf)
+{
+	// File metadata
+	xf->filename = NULL;
+	xf->f = NULL;
+	xf->size = 0;
+
+	xf->sections = NULL;
+
+	// File navigation
+	xf->next_read = 0;
+
+	// File history initialization
+	xf->use_history = 0;
+	xf->history_redo = NULL;
+	xf->history_undo = NULL;
+}
+
+static void xchange_file_dispose(XChangeFile *xf)
+{
+	if (xf->filename != NULL)
+		free(xf->filename);
+
+	if (xf->f != NULL)
+		fclose(xf->f);
+
+	if (xf->sections != NULL)
+	{
+		FileSection *section = xf->sections, *section2;
+		do
+		{
+			section2 = section->next;
+			if (section->type == XCF_SECTION_MEMORY)
+				free(section->data.data);
+			free(section);
+			section = section2;
+		} while(section != NULL);
+	}
+
+	destroyFileActionChain(xf->history_undo);
+	destroyFileActionChain(xf->history_redo);
+}
+
 static XChangeFile * xchange_file_openf(FILE *f);
 
 XChangeFile * xchange_file_open(const char *path, const char *mode)
@@ -189,7 +232,6 @@ XChangeFile * xchange_file_open(const char *path, const char *mode)
 		xf->filename = strdup(path);
 		if (xf->filename == NULL)
 		{
-			fclose(f);
 			xchange_file_close(xf);
 			return NULL;
 		}
@@ -207,15 +249,12 @@ static XChangeFile * xchange_file_openf(FILE *f)
 		return NULL;
 	}
 
-	// File history initialization
-	xf->use_history = 0;
-	xf->history_redo = NULL;
-	xf->history_undo = NULL;
-
-	xf->f = f;
+	xchange_file_init(xf);
 
 	if (f != NULL)
 	{
+		xf->f = f;
+
 		// Fill size field
 		if (fseek(f, 0, SEEK_END) != 0)
 		{
@@ -236,63 +275,50 @@ static XChangeFile * xchange_file_openf(FILE *f)
 			xf->size --;
 		*/
 	}
-	else
-	{
-		xf->size = 0;
-	}
-
-	xf->filename = NULL;
 
 	// Create initial section...
-	if (xf->size == 0)
+	if (xf->size > 0)
 	{
-		xf->sections = NULL;
-	}
-	else if (xf->size <= MAXFULLFILEBUFFERSIZE)
-	{
-		// File fits into memory
+		if (xf->size <= MAXFULLFILEBUFFERSIZE)
+		{
+			// File fits into memory
 
-		if (fseek(f, 0, SEEK_SET) != 0)
-		{
-			fclose(f);
-			free(xf->filename);
-			free(xf);
-			return NULL;
-		}
-		xf->sections = xchange_new_section(XCF_SECTION_MEMORY, xf->size, 0);
-		if (xf->sections == NULL)
-		{
-			fclose(f);
-			free(xf->filename);
-			free(xf);
-			return NULL;
-		}
-		if (fread(xf->sections->data.data, 1, xf->size, f) < xf->size)
-		{
-			if (ferror(f))
+			if (fseek(f, 0, SEEK_SET) != 0)
 			{
 				fclose(f);
-				free(xf->sections);
-				free(xf->filename);
+				free(xf);
+				return NULL;
+			}
+			xf->sections = xchange_new_section(XCF_SECTION_MEMORY, xf->size, 0);
+			if (xf->sections == NULL)
+			{
+				fclose(f);
+				free(xf);
+				return NULL;
+			}
+			if (fread(xf->sections->data.data, 1, xf->size, f) < xf->size)
+			{
+				if (ferror(f))
+				{
+					fclose(f);
+					free(xf->sections);
+					free(xf);
+					return NULL;
+				}
+			}
+		}
+		else
+		{
+			// File too large to be loaded to memory
+			xf->sections = xchange_new_section(XCF_SECTION_FILE, xf->size, 0);
+			if (xf->sections == NULL)
+			{
+				fclose(f);
 				free(xf);
 				return NULL;
 			}
 		}
 	}
-	else
-	{
-		// File too large to be loaded to memory
-		xf->sections = xchange_new_section(XCF_SECTION_FILE, xf->size, 0);
-		if (xf->sections == NULL)
-		{
-			fclose(f);
-			free(xf->filename);
-			free(xf);
-			return NULL;
-		}
-	}
-
-	xf->next_read = 0;
 
 	return xf;
 }
@@ -302,27 +328,7 @@ void xchange_file_close(XChangeFile * xfile)
 	if (xfile == NULL)
 		return;
 
-	if (xfile->filename != NULL)
-		free(xfile->filename);
-
-	if (xfile->f != NULL)
-		fclose(xfile->f);
-
-	if (xfile->sections != NULL)
-	{
-		FileSection *section = xfile->sections, *section2;
-		do
-		{
-			section2 = section->next;
-			if (section->type == XCF_SECTION_MEMORY)
-				free(section->data.data);
-			free(section);
-			section = section2;
-		} while(section != NULL);
-	}
-
-	destroyFileActionChain(xfile->history_undo);
-	destroyFileActionChain(xfile->history_redo);
+	xchange_file_dispose(xfile);
 
 	free(xfile);
 }
@@ -2006,4 +2012,3 @@ uint64_t xchange_file_read_be_ulong(XChangeFile * xfile)
 {
 	return read_UBEbytes(xfile, 8);
 }
-
