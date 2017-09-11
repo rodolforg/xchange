@@ -78,6 +78,14 @@ typedef struct XChangeFile XChangeFile;
  */
 void xchange_file_set_max_memory_size(size_t memsize);
 
+/**
+ * Create a new file for writing. Data remains in memory unless it is saved.
+ *
+ * It cannot be saved by xchange_file_save() as the file name would be unknown.
+ * Therefore, use xchange_file_save_as() or xchange_file_save_copy_as().
+ * @return a newly allocated handler. Should be freed by xchange_file_close(). Returns NULL on failure.
+ */
+XChangeFile * xchange_file_new();
 
 /**
  * Open a file for reading, creating, change it...
@@ -86,6 +94,12 @@ void xchange_file_set_max_memory_size(size_t memsize);
  * @return a newly allocated handler. Should be freed by xchange_file_close(). Returns NULL on failure.
  */
 XChangeFile * xchange_file_open(const char *path, const char *mode);
+
+/**
+ * Create a temporary file for writing.
+ * @return a newly allocated handler. Should be freed by xchange_file_close(). Returns NULL on failure.
+ */
+XChangeFile * xchange_file_new_temp();
 
 /**
  * Save file previously opened by xchange_file_open() with its changes.

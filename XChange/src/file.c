@@ -213,6 +213,16 @@ static void xchange_file_dispose(XChangeFile *xf)
 
 static XChangeFile * xchange_file_openf(FILE *f);
 
+XChangeFile * xchange_file_new()
+{
+	XChangeFile *xf = malloc(sizeof(struct XChangeFile));
+	if (xf == NULL)
+		return NULL;
+
+	xchange_file_init(xf);
+	return xf;
+}
+
 XChangeFile * xchange_file_open(const char *path, const char *mode)
 {
 	FILE *f = NULL;
@@ -239,6 +249,19 @@ XChangeFile * xchange_file_open(const char *path, const char *mode)
 			return NULL;
 		}
 	}
+	return xf;
+}
+
+XChangeFile * xchange_file_new_temp()
+{
+	FILE *f = tmpfile();
+	if (f == NULL)
+		return NULL;
+
+	XChangeFile *xf = xchange_file_openf(f);
+	if (xf == NULL)
+		fclose(f);
+
 	return xf;
 }
 
@@ -452,7 +475,7 @@ static int xchange_save_bytes(const XChangeFile * xfile, FILE *f)
 
 int xchange_file_save(const XChangeFile * xfile)
 {
-	if (xfile == NULL)
+	if (xfile == NULL || xfile->f == NULL)
 		return 0;
 	if (!check_save_overwrite_sanity(xfile))
 	{
